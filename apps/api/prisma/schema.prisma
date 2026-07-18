@@ -1,13 +1,66 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum ApplicationStatus {
+  APPLIED
+  ASSESSMENT
+  INTERVIEW
+  OFFER
+  REJECTED
+  GHOSTED
+}
+
+enum WorkMode {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
+model Application {
+  id        String            @id @default(uuid())
+  company   String
+  role      String
+  url       String?
+  status    ApplicationStatus @default(APPLIED)
+  workMode  WorkMode?
+  salary    Int?
+  notes     String?
+  appliedAt DateTime          @default(now())
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  statusHistory StatusHistory[]
+  notifications Notification[]
+
+  @@index([status])
+  @@index([appliedAt])
+}
+
+model StatusHistory {
+  id            String             @id @default(uuid())
+  applicationId String
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  changedAt     DateTime           @default(now())
+  note          String?
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+model Notification {
+  id            String    @id @default(uuid())
+  applicationId String
+  type          String
+  payload       Json
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 }
