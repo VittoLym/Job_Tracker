@@ -38,24 +38,26 @@ export class ApplicationsRepository {
   }
 
   async update(id: string, dto: UpdateApplicationDto) {
-    const current = await this.prisma.application.findUnique({ where: { id } });
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.application.findUnique({ where: { id } });
 
-    return this.prisma.application.update({
-      where: { id },
-      data: {
-        ...dto,
-        ...(dto.status && dto.status !== current?.status
-          ? {
-              statusHistory: {
-                create: {
-                  fromStatus: current?.status,
-                  toStatus: dto.status,
+      return tx.application.update({
+        where: { id },
+        data: {
+          ...dto,
+          ...(dto.status && dto.status !== current?.status
+            ? {
+                statusHistory: {
+                  create: {
+                    fromStatus: current?.status,
+                    toStatus: dto.status,
+                  },
                 },
-              },
-            }
-          : {}),
-      },
-      include: { statusHistory: true },
+              }
+            : {}),
+        },
+        include: { statusHistory: true },
+      });
     });
   }
 
