@@ -8,6 +8,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { LoggerModule } from 'nestjs-pino';
 import { v4 as uuidv4 } from 'uuid';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
     PrismaModule,
     ApplicationsModule,
     NotificationsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
