@@ -7,6 +7,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { NotificationsModule } from './notifications/notifications.module';
 import { LoggerModule } from 'nestjs-pino';
 import { v4 as uuidv4 } from 'uuid';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 
 @Module({
   imports: [
@@ -24,6 +25,10 @@ import { v4 as uuidv4 } from 'uuid';
           correlationId: req.id,
         }),
       },
+    }),
+    PrometheusModule.register({
+      path: '/metrics',
+      defaultMetrics: { enabled: true },
     }),
     BullModule.forRoot({
       connection: {

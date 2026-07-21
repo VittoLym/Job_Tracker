@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ApplicationsRepository } from './applications.repository';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MetricsService } from '../metrics/metrics.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { ApplicationStatus } from '@prisma/client';
@@ -10,6 +11,7 @@ export class ApplicationsService {
   constructor(
     private readonly repo: ApplicationsRepository,
     private readonly notifications: NotificationsService,
+    private readonly metrics: MetricsService,
   ) {}
 
   findAll(status?: ApplicationStatus) {
@@ -22,8 +24,10 @@ export class ApplicationsService {
     return app;
   }
 
-  create(dto: CreateApplicationDto) {
-    return this.repo.create(dto);
+  async create(dto: CreateApplicationDto) {
+    const app = await this.repo.create(dto);
+    this.metrics.incrementApplicationsCreated();
+    return app;
   }
 
   async update(id: string, dto: UpdateApplicationDto) {
@@ -38,6 +42,8 @@ export class ApplicationsService {
         fromStatus: current.status,
         toStatus: dto.status,
       });
+
+      this.metrics.incrementStatusChange(current.status, dto.status);
     }
 
     return updated;
