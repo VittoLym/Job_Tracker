@@ -1,15 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,        // elimina propiedades no declaradas en el DTO
-      forbidNonWhitelisted: true, // lanza error si llegan propiedades extra
-      transform: true,        // convierte tipos automáticamente (string → number, etc.)
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 
