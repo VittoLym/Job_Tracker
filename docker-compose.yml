@@ -1,5 +1,3 @@
-# docker-compose.yml — Production-like
-
 services:
   postgres:
     image: postgres:17
