@@ -9,5 +9,6 @@ import { MetricsModule } from '../metrics/metrics.module';
   imports: [NotificationsModule, MetricsModule],
   controllers: [ApplicationsController],
   providers: [ApplicationsService, ApplicationsRepository],
+  exports: [ApplicationsRepository],
 })
 export class ApplicationsModule {}

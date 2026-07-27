@@ -10,6 +10,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { HealthModule } from './health/health.module';
 import 'dotenv/config';
+import { GmailModule } from './gmail/gmail.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 console.log('REDIS_HOST:', process.env.REDIS_HOST);
 console.log('REDIS_PORT:', process.env.REDIS_PORT);
 @Module({
@@ -43,6 +45,8 @@ console.log('REDIS_PORT:', process.env.REDIS_PORT);
     ApplicationsModule,
     NotificationsModule,
     HealthModule,
+    GmailModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [AppService],
