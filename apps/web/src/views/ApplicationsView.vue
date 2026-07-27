@@ -165,7 +165,7 @@
           <div class="modal-footer">
             <button class="btn-ghost" @click="closeModal">Cancel</button>
             <button
-              class="btn-primary"
+              class="btn-confirm"
               :disabled="!form.company || !form.role"
               @click="submit"
             >
@@ -498,9 +498,24 @@ td { padding: 16px 20px; font-size: 13px; border-bottom: 1px solid #f0ecf9; }
   transition: all 0.2s;
   margin-bottom: 24px;
 }
-.btn-primary:hover { background: #4f46e5; box-shadow: 0 4px 16px rgba(53,37,205,0.35); transform: translateY(-1px); }
-.btn-primary:active { transform: scale(0.97); }
-.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-confirm{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #3525cd;
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-right: 20px;
+}
+.btn-primary:hover, .btn-confirm:hover { background: #4f46e5; box-shadow: 0 4px 16px rgba(53,37,205,0.35); transform: translateY(-1px); }
+.btn-primary:active, .btn-confirm:active { transform: scale(0.97); }
+.btn-primary:disabled, .btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 .btn-ghost {
   background: none;

@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: jobtracker
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -37,6 +37,8 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/jobtracker
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
       postgres:
         condition: service_healthy

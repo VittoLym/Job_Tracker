@@ -9,7 +9,9 @@ import { LoggerModule } from 'nestjs-pino';
 import { v4 as uuidv4 } from 'uuid';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { HealthModule } from './health/health.module';
-
+import 'dotenv/config';
+console.log('REDIS_HOST:', process.env.REDIS_HOST);
+console.log('REDIS_PORT:', process.env.REDIS_PORT);
 @Module({
   imports: [
     LoggerModule.forRoot({
@@ -33,8 +35,8 @@ import { HealthModule } from './health/health.module';
     }),
     BullModule.forRoot({
       connection: {
-        host: 'localhost',
-        port: 6379,
+        host: process.env.REDIS_HOST ?? 'localhost',
+        port: Number(process.env.REDIS_PORT) || 6379,
       },
     }),
     PrismaModule,
