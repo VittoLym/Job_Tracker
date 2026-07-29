@@ -6,6 +6,7 @@ interface ParsedEmail {
   companyHint: string | null;
   role: string | null;
   shouldCreate: boolean;
+  urlJob: string | null;
 }
 
 @Injectable()
@@ -27,7 +28,7 @@ export class EmailParserService {
       const company = this.extractCompanyFromSubject(subject);
       const role = this.extractRoleFromSnippet(body);
       console.log(role, 'este el rol amigo');
-      return { detectedStatus: 'APPLIED', companyHint: company, role, shouldCreate: true };
+      return { detectedStatus: 'APPLIED', companyHint: company, role, shouldCreate: true, urlJob: this.extractJobUrl(body) };
     }
 
     // OFFER
@@ -38,7 +39,7 @@ export class EmailParserService {
       full.includes('job offer') ||
       full.includes('we would like to offer')
     ) {
-      return { detectedStatus: 'OFFER', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false };
+      return { detectedStatus: 'OFFER', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false, urlJob: null };
     }
 
     // REJECTED
@@ -52,7 +53,7 @@ export class EmailParserService {
       full.includes('lamentamos') ||
       full.includes('we regret')
     ) {
-      return { detectedStatus: 'REJECTED', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false };
+      return { detectedStatus: 'REJECTED', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false, urlJob: null };
     }
 
     // INTERVIEW
@@ -66,7 +67,7 @@ export class EmailParserService {
       full.includes('next step') ||
       full.includes('siguiente paso')
     ) {
-      return { detectedStatus: 'INTERVIEW', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false };
+      return { detectedStatus: 'INTERVIEW', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false, urlJob: null };
     }
 
     // ASSESSMENT
@@ -77,10 +78,10 @@ export class EmailParserService {
       full.includes('challenge') ||
       full.includes('desafío')
     ) {
-      return { detectedStatus: 'ASSESSMENT', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false };
+      return { detectedStatus: 'ASSESSMENT', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false, urlJob: null };
     }
 
-    return { detectedStatus: null, companyHint: null, role: null, shouldCreate: false };
+    return { detectedStatus: null, companyHint: null, role: null, shouldCreate: false, urlJob: null };
   }
 
   private extractCompanyFromSubject(subject: string): string | null {
@@ -116,24 +117,31 @@ export class EmailParserService {
   }
   private extractRoleFromSnippet(body: string): string | null {
     const lines = body
-      .split('\n')
-      .map(line => line.trim())
+      .split(/\r?\n/)
+      .map(x => x.trim())
       .filter(Boolean);
 
-    const idx = lines.findIndex(line =>
-      line.includes('Se ha enviado tu solicitud a'),
+    const sentIndex = lines.findIndex(l =>
+      l.includes('Se ha enviado tu solicitud a'),
     );
 
-    if (idx === -1) {
+    if (sentIndex === -1) {
       return null;
     }
 
-    // estructura:
-    // idx     -> Se ha enviado...
-    // idx + 1 -> empresa
-    // idx + 2 -> role
-    // idx + 3 -> empresa otra vez
+    const company = lines[sentIndex]
+      .replace('Se ha enviado tu solicitud a', '')
+      .replace('.', '')
+      .trim();
 
-    return lines[idx + 2] ?? null;
+    const role = lines[sentIndex + 1] || null;
+    return role;
+  }
+  private extractJobUrl(body: string): string | null {
+    const match = body.match(
+      /https:\/\/www\.linkedin\.com\/comm\/jobs\/view\/[^\s]+/,
+    );
+
+    return match?.[0] ?? null;
   }
 }

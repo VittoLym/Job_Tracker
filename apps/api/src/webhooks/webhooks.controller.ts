@@ -32,10 +32,10 @@ export class WebhooksController {
 
       for (const { from, subject, snippet, body } of messages) {
         this.logger.log(
-          `Email: de= ${from} | asunto= ${subject} | snippet= ${snippet} | Body= ${body}`,
+          `Email: de= ${from} | asunto= ${subject} | snippet= ${snippet}`,
         );
 
-        const { detectedStatus, companyHint, role, shouldCreate } = this.parser.parse(from, subject, snippet, body);
+        const { detectedStatus, companyHint, role, shouldCreate, urlJob } = this.parser.parse(from, subject, snippet, body);
 
         if (!detectedStatus || !companyHint) {
           this.logger.log('Email no relevante, ignorando');
@@ -43,7 +43,8 @@ export class WebhooksController {
         }
 
         const applications = await this.applicationsRepo.findAll();
-        const match = applications!.find(app =>
+        const match = applications!.find(
+          (app) =>
             app.company.toLowerCase().includes(companyHint.toLowerCase()) ||
             companyHint.toLowerCase().includes(app.company.toLowerCase()),
         );
@@ -54,9 +55,13 @@ export class WebhooksController {
             company: companyHint,
             role: role ?? 'No especificado',
             status: 'APPLIED',
+            workMode: 'REMOTE',
             notes: 'Creado automáticamente desde LinkedIn',
+            url: urlJob ?? '',
           });
-          this.logger.log(`✅ Nueva application creada automáticamente: ${companyHint} — ${role}`);
+          this.logger.log(
+            `✅ Nueva application creada automáticamente: ${companyHint} — ${role}`,
+          );
           continue;
         }
 
@@ -66,11 +71,15 @@ export class WebhooksController {
         }
 
         if (match.status === detectedStatus) {
-          this.logger.log(`Application ya tiene status ${detectedStatus}, ignorando`);
+          this.logger.log(
+            `Application ya tiene status ${detectedStatus}, ignorando`,
+          );
           continue;
         }
 
-        await this.applicationsRepo.update(match.id, { status: detectedStatus });
+        await this.applicationsRepo.update(match.id, {
+          status: detectedStatus,
+        });
 
         await this.notifications.notifyStatusChange({
           applicationId: match.id,
