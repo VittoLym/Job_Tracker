@@ -5,6 +5,8 @@ import { MetricsService } from '../metrics/metrics.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
 import { ApplicationStatus } from '@prisma/client';
+import { GmailService } from '../gmail/gmail.service';
+import { EmailParserService } from '../gmail/email-parser.service';
 
 @Injectable()
 export class ApplicationsService {
@@ -12,6 +14,8 @@ export class ApplicationsService {
     private readonly repo: ApplicationsRepository,
     private readonly notifications: NotificationsService,
     private readonly metrics: MetricsService,
+    private readonly gmailService: GmailService,
+    private readonly parser: EmailParserService,
   ) {}
 
   findAll(status?: ApplicationStatus) {

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -11,6 +11,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { HealthModule } from './health/health.module';
 import 'dotenv/config';
 import { GmailModule } from './gmail/gmail.module';
+import { GmailService } from './gmail/gmail.service';
 import { WebhooksModule } from './webhooks/webhooks.module';
 console.log('REDIS_HOST:', process.env.REDIS_HOST);
 console.log('REDIS_PORT:', process.env.REDIS_PORT);
@@ -51,4 +52,14 @@ console.log('REDIS_PORT:', process.env.REDIS_PORT);
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  constructor(private readonly gmailService: GmailService) {}
+
+  async onModuleInit() {
+    try {
+      await this.gmailService.watchInbox();
+    } catch (err) {
+      console.error('Error activando Gmail watch:', err);
+    }
+  }
+}
