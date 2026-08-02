@@ -277,7 +277,7 @@ watch(isDark, (val) => {
   background: var(--bg-primary);
   padding: 24px;
   min-height: 100vh;
-  transition: background 0.3s ease, color 0.3s ease;
+  transition: background 0.2s ease, color 0.195s ease;
 }
 
 /* Header */

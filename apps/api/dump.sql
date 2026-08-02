@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict SauDbzRtcwVLIe8f9DkiUVmh8mrtdJbDkjEfDEeTBF4Wr5MsCqn1zp5agiyu60v
+\restrict nxzgmI97N5KNv1gegq4KOJ29gGK8kqbVtaCMhwW9qm3429dKNkrAPsShfeLXh4Q
 
 -- Dumped from database version 18.4
 -- Dumped by pg_dump version 18.4
@@ -41,6 +41,18 @@ ee8f8592-7863-4646-acd1-e42e98c71e87	CRAFT labs	Python Developer	https://www.lin
 8bb91659-6f1c-4fc3-9eeb-027a969e7659	oowlish	Full Stack Web Engineer (Python & React)	https://www.linkedin.com/jobs/view/4437434351/?alternateChannel=search&eBP=NOT_ELIGIBLE_FOR_CHARGING&refId=Vch8OpTQb3kgc9dtaBfBHA%3D%3D&trackingId=hSGQouJAsbKFVqS6I49xZQ%3D%3D	APPLIED	REMOTE	3500	\N	2026-07-23 23:24:32.137	2026-07-23 23:24:32.137	2026-07-23 23:26:20.212
 3271083b-1351-470e-9bd2-bcdb78ac9daf	Wakapi	Backend Engineer	https://www.linkedin.com/jobs/view/4437994611/?alternateChannel=search&eBP=NOT_ELIGIBLE_FOR_CHARGING&refId=vROKSPRR80I1k4dGAnq7SQ%3D%3D&trackingId=UUov6UaX3TbJTIxRwBmxlw%3D%3D	APPLIED	REMOTE	3500	\N	2026-07-23 23:28:58.931	2026-07-23 23:28:58.931	2026-07-23 23:28:58.931
 e6237b8f-e555-4c4b-8630-3320e68a74c5	C&S informatica	Desarrollador Front React Next Js S	https://ar.computrabajo.com/trabajo-de-developer#BBC19379DB48BC4761373E686DCF3405	APPLIED	REMOTE	3000	\N	2026-07-23 23:32:00.144	2026-07-23 23:32:00.144	2026-07-23 23:32:00.144
+7227ff31-8394-4636-a0ba-ca8e8fda1954	PedidosYa	Sr Software Engineer Backend 	https://www.linkedin.com/jobs/view/4430574515/?alternateChannel=search&eBP=CwEAAAGfqr9nv_iLZzWU56-DOtiUwkQ2k0r8hvldHO-8QS2kt4jBRA2fNnBQZhNptDuIQUdsJlRM0UmF6g-SHtLAcQlWypXoe7MldG0NxP7ybs6PHSQ1ULtwRzzubYt3SZopNDJOvgH4kk4YP8hl_5QlA4MgCGNpMrjn9fndqokD7LDdlDbetA0tpEr7TV5pXCo-qxLh4YW6S7sYsN9WAcP8c2DdzMPTK417eASHm-jmsI_infHXqYPZr4-2ApdEMLR-Kx7xz7E_FYPMkDbARqPR52EaPbCFnwi3V_tyHu-GaTVh8KxauESgzxqF9v4opNkni6l6EsKhJJgyinFOjugSXo-zBjj0fofv-plVhwMHyr47mcud-6GQXujbYdVvS-rcKSs9esbb8xNqgoRt6Iad8UWm-SyBSs_FyAgQ-52k6YSai36_1LBYXKu1fcMBCOFks8QQ195Dp8cy6bMdyPAr3uw_sdLNaa31s4hiA0bZOo0&refId=2sWsWUet73eu6wEfz46UbA%3D%3D&trackingId=PSyU9eSObvn0J69J6xDNzw%3D%3D	APPLIED	REMOTE	2000	\N	2026-07-29 00:37:54.231	2026-07-29 00:37:54.231	2026-07-29 00:37:54.231
+efe1d524-16dd-4725-9674-883b81492f61	Fintech Platform (Confidential)	Se ha enviado tu solicitud a Fintech Platform (Confidential). ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏	\N	APPLIED	\N	\N	Creado automáticamente desde LinkedIn	2026-07-29 00:52:49.033	2026-07-29 00:52:49.033	2026-07-29 00:52:49.033
+5cff55c4-7258-4c5b-bfeb-d9f9898ba730	Softgic	Se ha enviado tu solicitud a Softgic. ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏	\N	APPLIED	\N	\N	Creado automáticamente desde LinkedIn	2026-07-29 01:06:48.454	2026-07-29 01:06:48.454	2026-07-29 01:06:48.454
+70c1f88a-bd2d-40a4-950e-4cdc1d00c4a4	Getronics	Se ha enviado tu solicitud a Getronics. ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏ ͏	\N	APPLIED	\N	\N	Creado automáticamente desde LinkedIn	2026-07-29 01:36:22.01	2026-07-29 01:36:22.01	2026-07-29 01:36:22.01
+983b1215-01a2-4651-9ee6-0a2ca58b7168	Flatiron Software	Se ha enviado tu solicitud a Flatiron Software.	\N	APPLIED	\N	\N	Creado automáticamente desde LinkedIn	2026-07-29 01:43:31.658	2026-07-29 01:43:31.658	2026-07-29 01:43:31.658
+5d3d8d18-4054-45a8-ac4b-9bbc1f491878	Coderio		\N	APPLIED	\N	\N	Creado automáticamente desde LinkedIn	2026-07-29 01:55:08.266	2026-07-29 01:55:08.266	2026-07-29 01:55:08.266
+7e8d37d1-467f-4f1d-beb4-6408b0ff9ea4	AYIGROUP		\N	APPLIED	\N	\N	Creado automáticamente desde LinkedIn	2026-07-29 01:57:52.626	2026-07-29 01:57:52.626	2026-07-29 01:57:52.626
+dc4a4b70-d2b1-429d-bdb6-474519435d6f	Stefanini Group	Stefanini Group	\N	APPLIED	REMOTE	\N	Creado automáticamente desde LinkedIn	2026-07-29 02:04:46.551	2026-07-29 02:04:46.551	2026-07-29 02:04:46.551
+0193a0a6-3a32-4029-874e-1cd4a908e864	Avenue Code	Senior Software Engineer (Backend)	\N	APPLIED	REMOTE	\N	Creado automáticamente desde LinkedIn	2026-07-29 02:11:25.787	2026-07-29 02:11:25.787	2026-07-29 02:11:25.787
+50b15030-7fd6-44ab-af3a-cd7441b612da	GlobalLogic	Python Developer	\N	APPLIED	REMOTE	\N	Creado automáticamente desde LinkedIn	2026-07-29 02:24:40.567	2026-07-29 02:24:40.567	2026-07-29 02:24:40.567
+1ec2014f-27d6-4bc0-9595-b3544b8a58f2	CRAFTLabs	Full Stack Developer	https://www.linkedin.com/comm/jobs/view/4439086399/?trackingId=QANPwB9mRZeEZuxR4bdedw%3D%3D&refId=zvHwDVLCQzS3iSZ1MwaI9w%3D%3D&lipi=urn%3Ali%3Apage%3Aemail_email_application_confirmation_with_nba_01%3BusLhrO8lSVSN563tZRkbBA%3D%3D&midToken=AQE4bm2SsPUZeA&midSig=2k8aM7siTP1so1&trk=eml-email_application_confirmation_with_nba_01-application~confirmation-0-view_job&trkEmail=eml-email_application_confirmation_with_nba_01-application~confirmation-0-view_job-null-l16dt0~ms5gscln~wj-null-null&eid=l16dt0-ms5gscln-wj&otpToken=Y2JlN2ZlMjU1YmM2MDIxZDc4ZTQ4ZGRlMzBhMDNmYTc2ZmU2MTZlMGI3OWUyOWNlYzkyZTNlNWVlYWVlNTJhMmZjYTU4ZDI3OGE0MDVkNmI4OWMwZTM3OWY4ZDIxNzgxNDkxM2RjOWYxNTk0YTc0Nzg3Y2M0MDM3ZDRiZjk1NThhZmFhMTI5NjQ3MjkyYzE5LDIsMQ%3D%3D	APPLIED	REMOTE	\N	Creado automáticamente desde LinkedIn	2026-07-29 02:27:27.956	2026-07-29 02:27:27.956	2026-07-29 02:27:27.956
+40624bd9-13f5-448e-bd86-50036f02dadb	Qodea	Backend Engineer - Python	https://www.linkedin.com/comm/jobs/view/4444970751/?trackingId=AoyOFFdiR8SLvYMaZot4wA%3D%3D&refId=GF5ERrT6QZK9tPH41lP5LA%3D%3D&lipi=urn%3Ali%3Apage%3Aemail_email_application_confirmation_with_nba_01%3BzO0bdjSwSiSErTiMv1sfWw%3D%3D&midToken=AQE4bm2SsPUZeA&midSig=0T3zke5Cfy1so1&trk=eml-email_application_confirmation_with_nba_01-application~confirmation-0-view_job&trkEmail=eml-email_application_confirmation_with_nba_01-application~confirmation-0-view_job-null-l16dt0~ms5g6es7~m8-null-null&eid=l16dt0-ms5g6es7-m8&otpToken=MjdlYzI4NzY5ZGIzNjVkY2YwM2EzZWNiMzJiYmU5ZjRiNWMyNzYwN2E0Nzc1YzM4YmY4MTEzYTRiYTQ0M2Q0N2ZiMTM2M2ViNDBlYjNmYTcyZDk3M2YzZDI2YzFhMDFhODI3ZTEwMGM0NGZmNzU3ZWRmZTcxMDg1YTA4YTkwNmIyZTgzMWMzMjIxMGQ5M2E0LDIsMQ%3D%3D	APPLIED	REMOTE	\N	Creado automáticamente desde LinkedIn	2026-07-29 08:51:44.578	2026-07-29 08:51:44.578	2026-07-29 08:51:44.578
 \.
 
 
@@ -77,6 +89,18 @@ f22652f4-ae50-41dc-82b0-b55a1aace2f1	39480f65-3889-4a6b-bb86-8ba98735efbd	\N	APP
 fa86ff06-96c4-4e0c-8bb9-f4963fd68888	3271083b-1351-470e-9bd2-bcdb78ac9daf	\N	APPLIED	2026-07-23 23:28:58.931	\N
 660e5068-3644-4302-8b59-6163035350fe	768a6a1a-34c3-496c-9afb-e7017cf6d352	\N	APPLIED	2026-07-23 23:30:54.7	\N
 0991418f-19c6-4025-bf5d-05d73f643b5a	e6237b8f-e555-4c4b-8630-3320e68a74c5	\N	APPLIED	2026-07-23 23:32:00.144	\N
+6382f8ca-fae7-423f-943d-1fddd344de4b	7227ff31-8394-4636-a0ba-ca8e8fda1954	\N	APPLIED	2026-07-29 00:37:54.231	\N
+4fce287f-3ca9-4f86-a863-f07c299e7f40	efe1d524-16dd-4725-9674-883b81492f61	\N	APPLIED	2026-07-29 00:52:49.033	\N
+0c049896-0325-4b67-96d8-a7c9d53a68f7	5cff55c4-7258-4c5b-bfeb-d9f9898ba730	\N	APPLIED	2026-07-29 01:06:48.454	\N
+c12c8551-605c-4a41-a262-00bb7a4a6bf4	70c1f88a-bd2d-40a4-950e-4cdc1d00c4a4	\N	APPLIED	2026-07-29 01:36:22.01	\N
+d8195f5b-5bb5-4566-a596-22f638d2d263	983b1215-01a2-4651-9ee6-0a2ca58b7168	\N	APPLIED	2026-07-29 01:43:31.658	\N
+3001764d-8219-4e78-9d30-fa41b324791d	5d3d8d18-4054-45a8-ac4b-9bbc1f491878	\N	APPLIED	2026-07-29 01:55:08.266	\N
+55912520-d430-469d-91bf-70b7579afebc	7e8d37d1-467f-4f1d-beb4-6408b0ff9ea4	\N	APPLIED	2026-07-29 01:57:52.626	\N
+0002efc9-6c86-4a45-bb2a-92f672f0415f	dc4a4b70-d2b1-429d-bdb6-474519435d6f	\N	APPLIED	2026-07-29 02:04:46.551	\N
+e9525877-2cd8-4814-a643-e61bf0930aff	0193a0a6-3a32-4029-874e-1cd4a908e864	\N	APPLIED	2026-07-29 02:11:25.787	\N
+c59109a2-208f-4faa-89a2-c7ee0f8dc75b	50b15030-7fd6-44ab-af3a-cd7441b612da	\N	APPLIED	2026-07-29 02:24:40.567	\N
+e6110c12-a1c9-455d-92b3-6a98004befc1	1ec2014f-27d6-4bc0-9595-b3544b8a58f2	\N	APPLIED	2026-07-29 02:27:27.956	\N
+9201a51d-ff74-488d-8653-32d1ac55d2d8	40624bd9-13f5-448e-bd86-50036f02dadb	\N	APPLIED	2026-07-29 08:51:44.578	\N
 \.
 
 
@@ -93,5 +117,5 @@ COPY public._prisma_migrations (id, checksum, finished_at, migration_name, logs,
 -- PostgreSQL database dump complete
 --
 
-\unrestrict SauDbzRtcwVLIe8f9DkiUVmh8mrtdJbDkjEfDEeTBF4Wr5MsCqn1zp5agiyu60v
+\unrestrict nxzgmI97N5KNv1gegq4KOJ29gGK8kqbVtaCMhwW9qm3429dKNkrAPsShfeLXh4Q
 

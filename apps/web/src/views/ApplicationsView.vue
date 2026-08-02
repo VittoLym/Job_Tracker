@@ -356,7 +356,7 @@ watch(
   gap: 0;
   height: 100%;
   background: var(--bg-page);
-  transition: background 0.1s ease;
+  transition: background 0.2s ease;
 }
 
 /* ===== Header ===== */
@@ -368,7 +368,7 @@ watch(
   flex-shrink: 0;
   padding: 32px;
   padding-bottom: 0;
-  transition: border-color 0.1s ease;
+  transition: border-color 0.2s ease;
 }
 
 .title {
@@ -506,7 +506,7 @@ watch(
   padding: 32px;
   padding-right: 20px;
   background: var(--bg-page);
-  transition: background 0.1s ease;
+  transition: background 0.2s ease;
 }
 
 .table-wrap > .empty {
