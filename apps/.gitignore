@@ -1,1 +1,3 @@
 api/prisma/generated/prisma
+
+.env.*
