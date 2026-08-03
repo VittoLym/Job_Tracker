@@ -33,6 +33,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    env_file:
+      - apps/api/.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/jobtracker
       REDIS_URL: redis://redis:6379

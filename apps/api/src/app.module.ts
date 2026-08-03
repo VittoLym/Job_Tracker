@@ -13,8 +13,6 @@ import 'dotenv/config';
 import { GmailModule } from './gmail/gmail.module';
 import { GmailService } from './gmail/gmail.service';
 import { WebhooksModule } from './webhooks/webhooks.module';
-console.log('REDIS_HOST:', process.env.REDIS_HOST);
-console.log('REDIS_PORT:', process.env.REDIS_PORT);
 @Module({
   imports: [
     LoggerModule.forRoot({
