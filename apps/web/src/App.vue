@@ -35,7 +35,12 @@
     </aside>
 
     <main class="content">
-      <RouterView />
+       <RouterView v-slot="{ Component }">
+          <component
+            :is="Component"
+            :is-dark="isDark"
+          />
+        </RouterView>
     </main>
   </div>
 </template>

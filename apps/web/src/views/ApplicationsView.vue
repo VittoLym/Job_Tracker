@@ -1,18 +1,24 @@
 <template>
-  <div class="applications-page">
+  <div class="applications-page" :class="{ dark: isDark }">
     <!-- Header -->
     <header class="page-header">
       <div>
         <h2 class="title">Applications</h2>
         <p class="subtitle">Manage and track your job search progress</p>
       </div>
-      <button class="btn-primary" @click="openModal()">
-        <span class="material-symbols-outlined">add</span>
-        New Application
-      </button>
+      <div class="header-actions">
+        <button class="theme-toggle" @click="toggleTheme" title="Toggle theme">
+          <span class="material-symbols-outlined">
+            {{ isDark ? 'dark_mode' : 'light_mode' }}
+          </span>
+        </button>
+        <button class="btn-primary" @click="openModal()">
+          <span class="material-symbols-outlined">add</span>
+          New Application
+        </button>
+      </div>
     </header>
-
-    <!-- Filters -->
+    <!-- Filters Bar -->
     <div class="filters-bar">
       <div class="filters-left">
         <button
@@ -26,9 +32,13 @@
           v-for="(config, key) in statusConfig"
           :key="key"
           class="filter-pill"
-          :class="{ active: store.statusFilter === key }"
+          :class="{ 
+            active: store.statusFilter === key,
+            'filter-pill-with-dot': true
+          }"
           @click="toggleFilter(key as ApplicationStatus)"
         >
+          <span v-if="config.dotColor" class="filter-dot" :style="{ background: config.dotColor }"></span>
           {{ config.label }}
         </button>
       </div>
@@ -45,8 +55,8 @@
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="table-wrap">
+    <!-- Desktop Table View -->
+    <div class="table-wrap desktop-only">
       <div v-if="store.loading" class="empty">Loading...</div>
       <div v-else-if="filtered.length === 0" class="empty">
         No applications found. Add one!
@@ -109,6 +119,99 @@
       </table>
     </div>
 
+    <!-- Mobile Cards View -->
+    <div class="mobile-cards-view md-hidden">
+      <!-- Search (Mobile) -->
+      <div class="search-wrapper">
+        <div class="search-container">
+          <span class="material-symbols-outlined search-icon">search</span>
+          <input
+            v-model="search"
+            class="search-input-mobile"
+            placeholder="Search applications..."
+            type="text"
+          />
+        </div>
+      </div>
+
+      <!-- Filter Pills (Mobile) -->
+      <div class="filters-wrapper">
+        <div class="filters-scroll">
+          <button
+            class="filter-pill-mobile"
+            :class="{ active: store.statusFilter === null }"
+            @click="store.statusFilter = null"
+          >
+            All
+          </button>
+          <button
+            v-for="(config, key) in statusConfig"
+            :key="key"
+            class="filter-pill-mobile"
+            :class="{ 
+              active: store.statusFilter === key,
+              'filter-pill-with-dot': true
+            }"
+            @click="toggleFilter(key as ApplicationStatus)"
+          >
+            <span v-if="config.dotColor" class="filter-dot" :style="{ background: config.dotColor }"></span>
+            {{ config.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Cards -->
+      <div class="cards-container">
+        <div v-if="store.loading" class="empty">Loading...</div>
+        <div v-else-if="filtered.length === 0" class="empty">
+          No applications found.
+        </div>
+        <div
+          v-else
+          v-for="app in filtered"
+          :key="app.id"
+          class="app-card"
+          @click="openModal(app)"
+        >
+          <div class="app-card-header">
+            <div class="app-card-company">
+              <div class="app-card-avatar">
+                {{ app.company[0] }}
+              </div>
+              <div>
+                <h3 class="app-card-title">{{ app.role }}</h3>
+                <p class="app-card-subtitle">{{ app.company }}</p>
+              </div>
+            </div>
+            <button class="app-card-menu" @click.stop="toggleMenuOptions(app.id)">
+              <span class="material-symbols-outlined">more_vert</span>
+            </button>
+          </div>
+
+          <div class="app-card-tags">
+            <span
+              class="tag"
+              :class="getStatusClass(app.status)"
+            >
+              {{ statusConfig[app.status]?.label }}
+            </span>
+            <span v-if="app.workMode" class="tag tag-secondary">{{ app.workMode }}</span>
+            <span v-if="app.salary" class="tag tag-secondary">${{ app.salary.toLocaleString() }}</span>
+          </div>
+
+          <div class="app-card-footer">
+            <div class="footer-item">
+              <span class="material-symbols-outlined footer-icon">event</span>
+              <span>Applied: {{ formatDate(app.appliedAt) }}</span>
+            </div>
+            <div class="footer-item" :class="getFooterStatusClass(app)">
+              <span class="material-symbols-outlined footer-icon">{{ getFooterIcon(app) }}</span>
+              <span>{{ getFooterText(app) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- Modal -->
     <Transition name="modal">
       <div v-if="modalOpen" class="modal-overlay" @click.self="closeModal">
@@ -162,16 +265,6 @@
             </div>
           </div>
 
-          <div class="modal-footer">
-            <button class="btn-ghost" @click="closeModal">Cancel</button>
-            <button
-              class="btn-confirm"
-              :disabled="!form.company || !form.role"
-              @click="submit"
-            >
-              {{ editingId ? 'Save Changes' : 'Add Application' }}
-            </button>
-          </div>
         </div>
       </div>
     </Transition>
@@ -179,40 +272,59 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import { useApplicationsStore } from '../stores/applications.store';
-import type { Application, ApplicationStatus } from '../types';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
- 
-const route = useRoute()
-const store = useApplicationsStore();
+import type { Application, ApplicationStatus } from '../types';
+import { useApplicationsStore } from '../stores/applications.store';
+
+// Si no tienes el store, puedes usar este mock
+
+// Props & Emits
+const props = defineProps<{
+  applications?: Application[];
+}>();
+
+const emit = defineEmits<{
+  (e: 'newApplication'): void;
+  (e: 'viewApplication', id: string): void;
+  (e: 'notifications'): void;
+  (e: 'toggleMenu'): void;
+  (e: 'navigate', tab: string): void;
+}>();
+
+// Store
+// const store = useApplicationsStore();
+
+// Mock store para demostración
+const store = useApplicationsStore();;
+
+// State
+const isDark = ref(false);
 const search = ref('');
-
-const statusConfig: Record<ApplicationStatus, { label: string; color: string }> = {
-  APPLIED:    { label: 'Applied',    color: '#4f46e5' },
-  ASSESSMENT: { label: 'Assessment', color: '#f59e0b' },
-  INTERVIEW:  { label: 'Interview',  color: '#3b82f6' },
-  OFFER:      { label: 'Offer',      color: '#10b981' },
-  REJECTED:   { label: 'Rejected',   color: '#ef4444' },
-  GHOSTED:    { label: 'Ghosted',    color: '#6b7280' },
-};
-
-const filtered = computed(() => {
-  let list = store.filtered;
-  if (search.value.trim()) {
-    const q = search.value.toLowerCase();
-    list = list.filter(a =>
-      a.company.toLowerCase().includes(q) ||
-      a.role.toLowerCase().includes(q)
-    );
-  }
-  return list;
-});
-
-// Modal
 const modalOpen = ref(false);
 const editingId = ref<string | null>(null);
+const activeTab = ref('applications');
+const route = useRoute();
 
+// Status Configuration
+const statusConfig: Record<ApplicationStatus, { label: string; color: string; dotColor?: string }> = {
+  APPLIED:    { label: 'Applied',    color: '#4f46e5', dotColor: '#4f46e5' },
+  ASSESSMENT: { label: 'Assessment', color: '#f59e0b', dotColor: '#f59e0b' },
+  INTERVIEW:  { label: 'Interview',  color: '#3b82f6', dotColor: '#3b82f6' },
+  OFFER:      { label: 'Offer',      color: '#10b981', dotColor: '#10b981' },
+  REJECTED:   { label: 'Rejected',   color: '#ef4444', dotColor: '#ef4444' },
+  GHOSTED:    { label: 'Ghosted',    color: '#6b7280', dotColor: '#6b7280' },
+};
+
+// Tabs
+const tabs = [
+  { key: 'dashboard', icon: 'dashboard', label: 'Dashboard' },
+  { key: 'applications', icon: 'work', label: 'Applications' },
+  { key: 'companies', icon: 'business', label: 'Companies' },
+  { key: 'insights', icon: 'insights', label: 'Insights' },
+];
+
+// Form
 const emptyForm = () => ({
   company: '',
   role: '',
@@ -224,6 +336,74 @@ const emptyForm = () => ({
 });
 
 const form = ref(emptyForm());
+
+// Computed
+const filtered = computed(() => {
+  let list = store.applications || [];
+  
+  // Apply status filter
+  if (store.statusFilter) {
+    list = list.filter(a => a.status === store.statusFilter);
+  }
+  
+  // Apply search
+  if (search.value.trim()) {
+    const q = search.value.toLowerCase();
+    list = list.filter(a =>
+      a.company.toLowerCase().includes(q) ||
+      a.role.toLowerCase().includes(q)
+    );
+  }
+  
+  return list;
+});
+
+// Methods
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric' 
+  });
+}
+
+function toggleFilter(status: ApplicationStatus) {
+  store.statusFilter = store.statusFilter === status ? null : status;
+}
+
+function getStatusClass(status: string) {
+  const classes = {
+    'APPLIED': 'tag-applied',
+    'ASSESSMENT': 'tag-assessment',
+    'INTERVIEW': 'tag-interview',
+    'OFFER': 'tag-offer',
+    'REJECTED': 'tag-rejected',
+    'GHOSTED': 'tag-ghosted',
+  };
+  return classes[status as keyof typeof classes] || 'tag-default';
+}
+
+function getFooterIcon(app: Application) {
+  if (app.status === 'OFFER') return 'check_circle';
+  if (app.status === 'ASSESSMENT') return 'assignment';
+  if (app.status === 'INTERVIEW') return 'schedule';
+  if (app.status === 'APPLIED') return 'hourglass_empty';
+  return 'event';
+}
+
+function getFooterText(app: Application) {
+  if (app.status === 'OFFER') return 'Offer Received';
+  if (app.status === 'ASSESSMENT') return 'Assessment Pending';
+  if (app.status === 'INTERVIEW') return 'Interview Scheduled';
+  if (app.status === 'APPLIED') return 'Awaiting Review';
+  return '';
+}
+
+function getFooterStatusClass(app: Application) {
+  if (app.status === 'OFFER') return 'footer-success';
+  if (app.status === 'ASSESSMENT') return 'footer-warning';
+  if (app.status === 'INTERVIEW') return 'footer-info';
+  return '';
+}
 
 function openModal(app?: Application) {
   if (app) {
@@ -267,6 +447,7 @@ async function submit() {
     await store.create(dto);
   }
   closeModal();
+  emit('newApplication');
 }
 
 async function confirmDelete(id: string) {
@@ -275,18 +456,49 @@ async function confirmDelete(id: string) {
   }
 }
 
-function toggleFilter(status: ApplicationStatus) {
-  store.statusFilter = store.statusFilter === status ? null : status;
+function toggleTheme() {
+  isDark.value = !isDark.value;
+  localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
 }
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function toggleMenu() {
+  emit('toggleMenu');
 }
 
+function toggleMenuOptions(id: string) {
+  // Implement menu options
+  console.log('Menu options for:', id);
+}
+
+function handleNotifications() {
+  emit('notifications');
+}
+
+function navigateTo(tab: string) {
+  activeTab.value = tab;
+  emit('navigate', tab);
+}
+
+// Lifecycle
 onMounted(async () => {
-  await store.fetchAll();
-  await nextTick();
-  console.log(route.query,'este se supone es el query')
+  // Cargar datos
+  await store.fetchAll?.();
+  
+  // Theme
+  const saved = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  isDark.value = saved ? saved === 'dark' : prefersDark;
+  
+  // Media query para dark mode
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  const handler = (e: MediaQueryListEvent) => {
+    if (!localStorage.getItem('theme')) {
+      isDark.value = e.matches;
+    }
+  };
+  mediaQuery.addEventListener('change', handler);
+  
+  // Abrir modal si viene con query param
   if (route.query.new === 'true') {
     openModal();
   }
@@ -295,7 +507,6 @@ onMounted(async () => {
 watch(
   () => route.query.new,
   (val) => {
-    console.log(val,'monolitico')
     if (val === 'true') {
       openModal();
     }
@@ -307,9 +518,8 @@ watch(
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
-/* ===== Variables globales ===== */
+/* ===== Variables ===== */
 :global(:root) {
-  /* Light mode */
   --bg-page: #fcf8ff;
   --bg-card: #ffffff;
   --bg-secondary: #f5f2ff;
@@ -323,6 +533,13 @@ watch(
   --shadow-color: rgba(0, 0, 0, 0.05);
   --shadow-hover: rgba(0, 0, 0, 0.06);
   --modal-overlay: rgba(0, 0, 0, 0.4);
+  --primary-color: #1e00a9;
+  --primary-container: #3525cd;
+  --on-primary: #ffffff;
+  --info: #3b82f6;
+  --warning: #f59e0b;
+  --success: #16a34a;
+  --error: #ba1a1a;
 }
 
 :global(html.dark) {
@@ -339,9 +556,10 @@ watch(
   --shadow-color: rgba(0, 0, 0, 0.2);
   --shadow-hover: rgba(0, 0, 0, 0.3);
   --modal-overlay: rgba(0, 0, 0, 0.7);
+  --primary-color: #c3c0ff;
 }
 
-/* ===== Estilos del componente ===== */
+/* ===== Base ===== */
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   display: inline-block;
@@ -350,25 +568,52 @@ watch(
   font-size: 20px;
 }
 
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
 .applications-page {
   display: flex;
   flex-direction: column;
   gap: 0;
-  height: 100%;
+  min-height: 100vh;
   background: var(--bg-page);
   transition: background 0.2s ease;
 }
 
-/* ===== Header ===== */
+/* ===== Utility ===== */
+.md-hidden {
+  display: none;
+}
+
+.desktop-only {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .md-hidden {
+    display: block !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* ===== Page Header (Desktop) ===== */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
   padding: 32px;
   padding-bottom: 0;
   transition: border-color 0.2s ease;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .title {
@@ -376,7 +621,6 @@ watch(
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.5px;
-  transition: color 0.1s ease;
 }
 
 .subtitle {
@@ -384,7 +628,6 @@ watch(
   color: var(--text-secondary);
   margin-top: 4px;
   margin-bottom: 24px;
-  transition: color 0.1s ease;
 }
 
 /* ===== Theme Toggle ===== */
@@ -408,11 +651,105 @@ watch(
   transform: scale(1.05);
 }
 
-.theme-toggle .material-symbols-outlined {
-  font-size: 22px;
+/* ===== Mobile Header ===== */
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 64px;
+  padding: 0 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
 }
 
-/* ===== Filters ===== */
+@media (max-width: 768px) {
+  .mobile-header {
+    display: flex;
+  }
+  .page-header {
+    display: none;
+  }
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--primary-color);
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.add-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--primary-container);
+  color: var(--on-primary);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.add-btn:active {
+  transform: scale(0.95);
+}
+
+.notif-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  position: relative;
+  padding: 4px;
+}
+
+.notif-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--error);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+}
+
+/* ===== Filters Bar ===== */
 .filters-bar {
   display: flex;
   align-items: center;
@@ -423,7 +760,12 @@ watch(
   flex-shrink: 0;
   flex-wrap: wrap;
   gap: 12px;
-  transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+@media (max-width: 768px) {
+  .filters-bar {
+    display: none;
+  }
 }
 
 .filters-left {
@@ -448,6 +790,9 @@ watch(
   background: var(--border-light);
   color: var(--text-muted);
   transition: all 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .filter-pill:hover {
@@ -460,6 +805,13 @@ watch(
   background: #3525cd;
   color: #fff;
   box-shadow: 0 2px 8px rgba(53, 37, 205, 0.25);
+}
+
+.filter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* ===== Search ===== */
@@ -506,15 +858,6 @@ watch(
   padding: 32px;
   padding-right: 20px;
   background: var(--bg-page);
-  transition: background 0.2s ease;
-}
-
-.table-wrap > .empty {
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: 14px;
-  padding: 60px 0;
-  transition: color 0.1s ease;
 }
 
 .table {
@@ -525,13 +868,11 @@ watch(
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 1px 4px var(--shadow-color);
-  transition: background 0.1s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 thead {
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-light);
-  transition: background 0.1s ease, border-color 0.3s ease;
 }
 
 th {
@@ -542,7 +883,6 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-secondary);
-  transition: color 0.1s ease;
 }
 
 .text-right {
@@ -554,7 +894,6 @@ td {
   font-size: 13px;
   border-bottom: 1px solid var(--border-light);
   color: var(--text-primary);
-  transition: border-color 0.1s ease, color 0.3s ease;
 }
 
 .table-row {
@@ -564,8 +903,6 @@ td {
 
 .table-row:hover {
   background: var(--bg-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--shadow-hover);
 }
 
 .table-row:last-child td {
@@ -591,23 +928,16 @@ td {
   font-weight: 700;
   color: #4f46e5;
   flex-shrink: 0;
-  transition: transform 0.2s, background 0.1s ease;
-}
-
-.table-row:hover .company-avatar {
-  transform: scale(1.08);
 }
 
 .company-name {
   font-weight: 700;
   color: var(--text-primary);
-  transition: color 0.1s ease;
 }
 
 .role-cell {
   color: var(--text-muted);
   font-weight: 500;
-  transition: color 0.1s ease;
 }
 
 /* ===== Status Badge ===== */
@@ -619,11 +949,6 @@ td {
   font-weight: 700;
   padding: 4px 10px;
   border-radius: 99px;
-  transition: transform 0.1s;
-}
-
-.table-row:hover .status-badge {
-  transform: scale(1.04);
 }
 
 .badge-dot {
@@ -633,7 +958,6 @@ td {
   flex-shrink: 0;
 }
 
-/* ===== Work Mode ===== */
 .work-mode-badge {
   font-size: 12px;
   font-weight: 500;
@@ -641,24 +965,20 @@ td {
   background: var(--border-light);
   color: var(--text-muted);
   border-radius: 4px;
-  transition: background 0.1s ease, color 0.1s ease;
 }
 
 .text-muted {
   color: var(--text-secondary);
-  transition: color 0.1s ease;
 }
 
 .salary-cell {
   font-weight: 700;
   color: var(--text-primary);
-  transition: color 0.1s ease;
 }
 
 .date-cell {
   font-size: 13px;
   color: var(--text-secondary);
-  transition: color 0.1s ease;
 }
 
 .actions-cell {
@@ -686,10 +1006,13 @@ td {
   margin-bottom: 24px;
 }
 
+.btn-primary:hover {
+  background: #4f46e5;
+  box-shadow: 0 4px 16px rgba(53, 37, 205, 0.35);
+  transform: translateY(-1px);
+}
+
 .btn-confirm {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   background: #3525cd;
   color: #fff;
   border: none;
@@ -699,26 +1022,16 @@ td {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.1s;
-  margin-right: 20px;
 }
 
-.btn-primary:hover,
 .btn-confirm:hover {
   background: #4f46e5;
   box-shadow: 0 4px 16px rgba(53, 37, 205, 0.35);
-  transform: translateY(-1px);
 }
 
-.btn-primary:active,
-.btn-confirm:active {
-  transform: scale(0.97);
-}
-
-.btn-primary:disabled,
 .btn-confirm:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  transform: none;
 }
 
 .btn-ghost {
@@ -730,7 +1043,7 @@ td {
   font-weight: 700;
   color: var(--text-muted);
   cursor: pointer;
-  transition: background 0.1s, color 0.1s ease;
+  transition: background 0.1s;
 }
 
 .btn-ghost:hover {
@@ -752,12 +1065,317 @@ td {
 .icon-btn:hover {
   background: var(--border-light);
   color: #3525cd;
-  box-shadow: 0 1px 4px var(--shadow-color);
 }
 
 .icon-btn.danger:hover {
   background: #fee2e2;
   color: #ef4444;
+}
+
+/* ===== Mobile Cards ===== */
+.mobile-cards-view {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 80px;
+}
+
+@media (max-width: 768px) {
+  .mobile-cards-view {
+    display: block;
+  }
+}
+
+/* Search Mobile */
+.search-wrapper {
+  padding: 16px;
+  background: var(--bg-page);
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-input-mobile {
+  width: 100%;
+  padding: 10px 16px 10px 44px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.search-input-mobile:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(30, 0, 169, 0.1);
+}
+
+/* Filters Mobile */
+.filters-wrapper {
+  padding: 0 16px 16px;
+  overflow-x: auto;
+  background: var(--bg-page);
+}
+
+.filters-scroll {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+
+.filters-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-pill-mobile {
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.filter-pill-mobile.active {
+  background: var(--primary-container);
+  color: var(--on-primary);
+  border-color: var(--primary-container);
+}
+
+/* Cards */
+.cards-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.app-card:active {
+  transform: scale(0.98);
+}
+
+.app-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.app-card-company {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.app-card-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+.app-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 2px 0;
+}
+
+.app-card-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.app-card-menu {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.app-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tag {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tag-applied {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.tag-interview {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--info);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.tag-assessment {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.tag-offer {
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(22, 163, 74, 0.2);
+}
+
+.tag-rejected {
+  background: rgba(186, 26, 26, 0.1);
+  color: var(--error);
+  border: 1px solid rgba(186, 26, 26, 0.2);
+}
+
+.tag-ghosted {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+  border: 1px solid rgba(107, 114, 128, 0.2);
+}
+
+.tag-secondary {
+  background: var(--bg-input);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.app-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.footer-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.footer-icon {
+  font-size: 14px;
+}
+
+.footer-success {
+  color: var(--success);
+}
+
+.footer-warning {
+  color: var(--warning);
+}
+
+.footer-info {
+  color: var(--info);
+}
+
+/* ===== Bottom Navigation (Mobile) ===== */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+  z-index: 50;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 8px;
+}
+
+@media (max-width: 768px) {
+  .bottom-nav {
+    display: flex;
+  }
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.2s;
+  gap: 2px;
+  min-width: 64px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.nav-item .material-symbols-outlined {
+  font-size: 24px;
+}
+
+.nav-item-active {
+  color: var(--primary-color);
+  background: rgba(30, 0, 169, 0.05);
+}
+
+.nav-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ===== Empty State ===== */
+.empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding: 60px 0;
 }
 
 /* ===== Modal ===== */
@@ -781,7 +1399,6 @@ td {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 24px 64px var(--shadow-color);
-  transition: background 0.1s ease, box-shadow 0.1s ease;
 }
 
 .modal-header {
@@ -791,14 +1408,13 @@ td {
   padding: 20px 24px;
   border-bottom: 1px solid var(--border-light);
   background: var(--bg-secondary);
-  transition: background 0.1s ease, border-color 0.1s ease;
 }
 
 .modal-header h3 {
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
-  transition: color 0.1s ease;
+  margin: 0;
 }
 
 .modal-body {
@@ -827,7 +1443,6 @@ label {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  transition: color 0.1s ease;
 }
 
 input,
@@ -842,11 +1457,6 @@ textarea {
   font-family: inherit;
   background: var(--bg-input);
   color: var(--text-primary);
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: var(--text-secondary);
 }
 
 input:focus,
@@ -867,7 +1477,6 @@ textarea {
   gap: 8px;
   padding: 16px 24px;
   border-top: 1px solid var(--border-light);
-  transition: border-color 0.1s ease;
 }
 
 /* ===== Transitions ===== */

@@ -7,11 +7,6 @@
         <p class="subtitle">Welcome back, {{ userName }}. Here's your application overview.</p>
       </div>
       <div class="header-actions">
-        <button class="theme-toggle" @click="toggleTheme">
-          <span class="material-symbols-outlined">
-            {{ isDark ? 'dark_mode' : 'light_mode' }}
-          </span>
-        </button>
         <button class="btn-primary" @click="handleNewApplication">
           <span class="material-symbols-outlined">add</span>
           New Application
@@ -245,6 +240,7 @@ interface Application {
 
 const props = defineProps<{
   userName?: string;
+  isDark?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -401,7 +397,15 @@ function handleViewApplications() {
 // --------------------------------------------------
 // LIFECYCLE
 // --------------------------------------------------
-
+watch(
+  () => props.isDark,
+  (newValue) => {
+    if (newValue !== undefined) {
+      isDark.value = newValue;
+    }
+  },
+  { immediate: true }
+);
 onMounted(() => {
   // Cargar aplicaciones desde la API
   store.fetchAll();
@@ -610,7 +614,7 @@ watch(isDark, (value) => {
   background: var(--bg-card);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .theme-toggle:hover {
@@ -649,7 +653,7 @@ watch(isDark, (value) => {
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 16px;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .metric-card:hover {
