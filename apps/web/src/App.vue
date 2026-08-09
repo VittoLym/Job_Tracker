@@ -1,5 +1,4 @@
 <template>
-  <!-- ✅ Añadimos :class="{ dark: isDark }" -->
   <div class="app" :class="{ dark: isDark }">
     <aside class="sidebar">
       <div class="sidebar-top">
@@ -48,6 +47,7 @@ function toggleTheme() {
   isDark.value = !isDark.value;
   applyTheme(isDark.value);
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
+  defineEmits()
 }
 
 function applyTheme(dark: boolean) {
