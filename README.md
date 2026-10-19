@@ -1,67 +1,56 @@
 # Job Tracker
 
-A full stack web app that helps job seekers keep track of every application in one place: where they applied, what stage each process is in, and what to do next. No more spreadsheets, lost links or "did I already apply here?" moments.
+A personal web app to keep track of job applications: where you applied, what stage each process is in, and what changed. It can also watch a Gmail inbox and update applications from the emails it receives (LinkedIn confirmations, interview invitations, offers, rejections).
 
-<!-- TODO: add a screenshot or GIF of the dashboard here -->
-<!-- ![Dashboard](docs/images/dashboard.png) -->
+> **Status:** personal project for a single user. It has no authentication of its own. Read [Known limitations](#known-limitations) before exposing it anywhere.
 
 ## Features
 
-- **Application lifecycle management**: track each application through its stages. <!-- TODO: list the real statuses you implemented (e.g. applied, interview, offer, rejected) -->
-- **Dashboard and analytics**: overview of your applications and progress.
-- **Email import workflows**: import applications from emails instead of typing them by hand. <!-- TODO: explain how it works (which provider, manual or automatic) -->
-- **REST API** built with NestJS. <!-- TODO: link to Swagger/OpenAPI if you have it -->
+- **Applications**: create, list, update and delete applications with company, role, job URL, status, work mode, salary and notes.
+- **Statuses**: `APPLIED`, `ASSESSMENT`, `INTERVIEW`, `OFFER`, `REJECTED`, `GHOSTED`. Work modes: `REMOTE`, `HYBRID`, `ONSITE`.
+- **Web app**: a dashboard and an applications list (Vue 3, Pinia).
+- **Gmail integration (optional)**: Gmail push notifications (Pub/Sub) call a webhook. A keyword-based parser (Spanish and English) detects new LinkedIn applications and status changes, matches the company by name and updates or creates the application. It only asks for the read-only `gmail.readonly` scope.
+- **Notifications queue**: every status change is enqueued in a BullMQ queue (`notifications`, 3 attempts with exponential backoff). The worker currently logs the change; it does not send anything yet.
+- **Observability**: structured logs with Pino and a correlation id per request, Prometheus metrics at `/metrics` (default metrics plus counters for created applications and status changes) and a health check at `/health`.
 
 ## Tech stack
 
 | Layer | Technologies |
 |---|---|
-| Frontend | Vue 3, TypeScript |
-| Backend | NestJS, TypeScript |
+| Frontend | Vue 3, TypeScript, Pinia, Vue Router, Axios, Vite |
+| Backend | NestJS 11, TypeScript, class-validator |
 | Database | PostgreSQL 17, Prisma ORM |
 | Queues and cache | Redis, BullMQ |
-| Observability | Prometheus <!-- TODO: confirm the metrics endpoint exists in the API --> |
+| Integrations | Gmail API (googleapis) |
+| Observability | Pino, Prometheus (`prom-client`) |
 | Infrastructure | Docker, Docker Compose |
 
 ## Repository layout
 
-Monorepo with the applications under `apps/`:
-
 ```
 Job_Tracker/
 ├── apps/
-│   ├── api/                  # NestJS REST API (has its own Dockerfile)
-│   └── [TODO: web]/          # Vue 3 frontend
+│   ├── api/                  # NestJS API (Dockerfile, Prisma schema and migrations)
+│   │   └── src/              # applications, gmail, webhooks, notifications, metrics, health, prisma
+│   └── web/                  # Vue 3 frontend (Vite)
 ├── docker-compose.yml        # PostgreSQL, Redis and the API
-├── docker-compose.dev.yml    # [TODO: describe how it differs]
-└── README.md
+├── docker-compose.dev.yml    # PostgreSQL and Redis only, for running the API locally
+└── AGENTS.md
 ```
-
-<!-- TODO: replace the tree above with the output of `tree -L 3 -I node_modules` -->
 
 ## Getting started
 
-### Prerequisites
-
-- Docker and Docker Compose
-- Node.js [TODO: version] to run the frontend or the API outside Docker
+Requires Docker with Compose and Node.js (the supported range is in `engines` in `apps/web/package.json`).
 
 ### 1. Configure the API
 
-The API reads its settings from `apps/api/.env`:
-
 ```bash
-cp apps/api/.env.example apps/api/.env   # TODO: make sure this file exists in the repo
+cp apps/api/.env.example apps/api/.env
 ```
 
-| Variable | Description |
-|---|---|
-| `JWT_SECRET` | Secret used to sign tokens |
-| <!-- TODO --> | <!-- add the rest from your .env.example --> |
+The Gmail variables are optional: leave `GMAIL_PUBSUB_TOPIC` empty and the Gmail watch is skipped. `docker-compose.yml` sets `DATABASE_URL`, `REDIS_URL`, `REDIS_HOST` and `REDIS_PORT` for the API container.
 
-`DATABASE_URL`, `REDIS_URL`, `REDIS_HOST` and `REDIS_PORT` are already set by `docker-compose.yml`.
-
-### 2. Start the backend
+### 2. Start PostgreSQL, Redis and the API
 
 ```bash
 git clone https://github.com/VittoLym/Job_Tracker.git
@@ -69,62 +58,96 @@ cd Job_Tracker
 docker compose up --build
 ```
 
-This starts three services:
+| Service | Address |
+|---|---|
+| PostgreSQL 17 (database `jobtracker`) | `localhost:5433` |
+| Redis | `localhost:6379` |
+| API | http://localhost:3000 |
 
-| Service | Image / build | Address |
-|---|---|---|
-| PostgreSQL | `postgres:17` (database `jobtracker`) | `localhost:5433` |
-| Redis | `redis:alpine` | `localhost:6379` |
-| API | built from `apps/api` | `http://localhost:3000` |
+The database credentials in `docker-compose.yml` are for local development only.
 
-PostgreSQL and Redis have health checks, and the API waits until both are healthy before starting.
+### 3. Apply the database migrations
 
-> The PostgreSQL credentials in `docker-compose.yml` are for local development only. Use your own secrets in any shared or production environment.
-
-### 3. Start the frontend
+From the repository root, with the containers running:
 
 ```bash
-# TODO: replace with your real commands
-cd apps/[web]
-npm install
+cd apps/api
+npm ci
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/jobtracker npx prisma migrate deploy
+```
+
+### 4. Start the frontend
+
+```bash
+cd apps/web
+npm ci
 npm run dev
 ```
 
-Frontend: http://localhost:[TODO port]
+Open http://localhost:5173 (Vite's default port). The frontend calls `http://localhost:3000` unless `VITE_API_URL` is set.
 
 ### Development mode
 
+`docker-compose.dev.yml` starts only PostgreSQL (port 5432) and Redis, so you can run the API on your machine:
+
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.dev.yml up -d
+cd apps/api
+npm ci
+npx prisma migrate deploy       # uses DATABASE_URL from apps/api/.env
+npm run start:dev
 ```
 
-<!-- TODO: explain what the dev compose file does (hot reload? different env?) -->
+## Gmail integration (optional)
+
+1. In Google Cloud, enable the Gmail API and create an OAuth client. Put its id, secret and redirect URI (`http://localhost:3000/auth/google/callback` for local use) in `apps/api/.env`.
+2. Open `http://localhost:3000/auth/google`, accept the read-only permission and copy the `refresh_token` from the response into `GOOGLE_REFRESH_TOKEN`.
+3. Create a Pub/Sub topic, let `gmail-api-push@system.gserviceaccount.com` publish to it, and set its full name in `GMAIL_PUBSUB_TOPIC`.
+4. Create a push subscription that points to `https://<your-public-url>/webhooks/gmail`. Locally you need a tunnel such as ngrok or cloudflared.
+
+On startup the API registers a Gmail watch on the INBOX label.
+
+## API
+
+| Method | Path | Description |
+|---|---|---|
+| GET, POST | `/applications` | List and create applications |
+| GET, PATCH, DELETE | `/applications/:id` | Read, update and delete one application |
+| GET | `/health` | Health check |
+| GET | `/metrics` | Prometheus metrics |
+| POST | `/webhooks/gmail` | Gmail push notifications |
+| GET | `/auth/google`, `/auth/google/callback` | One-off OAuth flow to obtain the Gmail refresh token |
+
+Request bodies are validated with `whitelist` and `forbidNonWhitelisted`.
 
 ## Testing
 
+The API has the default Nest unit test and e2e template and no real tests yet.
+
 ```bash
-# TODO: replace with your real commands
-npm run test
+cd apps/api
+npm test
 ```
 
-> Current status: [TODO: be honest here, e.g. "unit tests in progress, see roadmap"].
+## Known limitations
+
+- **No authentication and open CORS** (`origin: true` with credentials). It is meant to run locally for one user.
+- **`POST /webhooks/gmail` does not verify the caller**, and it logs the sender, subject and snippet of each email it processes.
+- **`/auth/google/callback` returns the refresh token in the HTTP response.** It is a one-off setup helper, not something to expose.
+- **The Gmail watch is registered only at startup.** Gmail watches expire and there is no renewal job yet.
+- **Email parsing is keyword-based** and matches the company by name, so false matches and misses are possible.
+- **The notifications worker only logs.** Nothing is sent to the user yet.
+- **The frontend is not part of `docker-compose.yml`.**
 
 ## Roadmap
 
-- [ ] Unit and e2e tests
+- [ ] Unit tests for the parser and the applications service, plus e2e tests
 - [ ] CI with GitHub Actions
+- [ ] Verify the Pub/Sub caller on the webhook
+- [ ] Renew the Gmail watch automatically
+- [ ] Authentication
+- [ ] Deliver notifications for real
 - [ ] Add the frontend to Docker Compose
-- [ ] [TODO: other ideas]
-
-## How I used AI in this project
-
-<!-- Be specific and honest. Recruiters want to know what you delegated and what you decided. -->
-
-- **Tools used:** [TODO: e.g. Claude Code, Copilot, ChatGPT]
-- **What I delegated:** [TODO: e.g. boilerplate, Prisma schema drafts, test scaffolding]
-- **What I decided and wrote myself:** [TODO: e.g. architecture, queue design, data model]
-- **How I reviewed AI output:** [TODO: e.g. read every diff, ran the app, wrote tests]
-- **Agent instructions:** see [`AGENTS.md`](./AGENTS.md) <!-- TODO: create this file -->
 
 ## Author
 

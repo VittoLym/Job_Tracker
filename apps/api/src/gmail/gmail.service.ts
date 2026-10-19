@@ -34,6 +34,11 @@ export class GmailService {
         labelIds: ['INBOX'],
       },
     });
+    const topicName = process.env.GMAIL_PUBSUB_TOPIC;
+    if (!topicName) {
+      this.logger.warn('GMAIL_PUBSUB_TOPIC is not set, skipping Gmail watch');
+      return;
+    }
     const initialHistoryId = res.data.historyId?.toString();
     if (initialHistoryId) {
       await this.redis.set('gmail:lastHistoryId', initialHistoryId);
