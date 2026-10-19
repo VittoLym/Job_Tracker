@@ -10,11 +10,6 @@ export class AppController {
 
   @Get()
   getHello(): string {
-    console.log(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI,
-    );
     return this.appService.getHello();
   }
   @Get('auth/google')
