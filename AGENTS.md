@@ -45,3 +45,7 @@ npm run build
 - The Gmail watch is registered at startup and never renewed.
 - The notifications worker only logs.
 - The frontend is not in Docker Compose.
+
+## How AI is used here
+
+The maintainer wrote the backend and designed the database schema. AI assistants handled the visual design of the frontend. Agents must not change the Prisma schema or add a migration without the maintainer reviewing it.

@@ -149,6 +149,12 @@ npm test
 - [ ] Deliver notifications for real
 - [ ] Add the frontend to Docker Compose
 
+## How I used AI in this project
+
+- **What I did myself:** the backend and the database schema.
+- **What I delegated:** the visual design of the frontend.
+- **Agent instructions:** see [`AGENTS.md`](./AGENTS.md).
+
 ## Author
 
 **Alexander Assón**, Backend / Full Stack Engineer, Mendoza, Argentina.
