@@ -24,27 +24,22 @@ export class GmailService {
     return oauth2Client;
   }
   async watchInbox(): Promise<void> {
+    const topicName = process.env.GMAIL_PUBSUB_TOPIC;
+    if (!topicName) {
+      this.logger.warn('GMAIL_PUBSUB_TOPIC is not set, skipping Gmail watch');
+      return;
+    }
+
     const auth = this.getOAuthClient();
     const gmail = google.gmail({ version: 'v1', auth });
 
     const res = await gmail.users.watch({
       userId: 'me',
       requestBody: {
-        topicName: 'projects/eighth-arbor-459517-q9/topics/gmail-notifications',
+        topicName,
         labelIds: ['INBOX'],
       },
     });
-    const topicName = process.env.GMAIL_PUBSUB_TOPIC;
-    if (!topicName) {
-      this.logger.warn('GMAIL_PUBSUB_TOPIC is not set, skipping Gmail watch');
-      return;
-    }
-    const initialHistoryId = res.data.historyId?.toString();
-    if (initialHistoryId) {
-      await this.redis.set('gmail:lastHistoryId', initialHistoryId);
-      this.logger.log(`Gmail watch activo hasta: ${new Date(Number(res.data.expiration)).toISOString()}`);
-    }
-  }
 
   async getNewMessages(newHistoryId: string): Promise<{ from: string; subject: string; snippet: string; body: string }[]> {
     const auth = this.getOAuthClient();

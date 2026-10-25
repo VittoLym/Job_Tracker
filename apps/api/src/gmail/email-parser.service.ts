@@ -27,7 +27,6 @@ export class EmailParserService {
     ) {
       const company = this.extractCompanyFromSubject(subject);
       const role = this.extractRoleFromSnippet(body);
-      console.log(role, 'este el rol amigo');
       return { detectedStatus: 'APPLIED', companyHint: company, role, shouldCreate: true, urlJob: this.extractJobUrl(body) };
     }
 
