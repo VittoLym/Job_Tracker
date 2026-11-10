@@ -13,6 +13,8 @@ import 'dotenv/config';
 import { GmailModule } from './gmail/gmail.module';
 import { GmailService } from './gmail/gmail.service';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { DemoReadOnlyGuard } from './common/demo-readonly.guard';
+import { APP_GUARD } from '@nestjs/core';
 @Module({
   imports: [
     LoggerModule.forRoot({
@@ -48,7 +50,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     WebhooksModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: DemoReadOnlyGuard }],
 })
 export class AppModule implements OnModuleInit {
   constructor(private readonly gmailService: GmailService) {}

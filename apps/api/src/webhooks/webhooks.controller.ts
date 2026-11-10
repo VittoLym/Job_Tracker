@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Logger, UnauthorizedException, Query } from '@nestjs/common';
 import { GmailService } from '../gmail/gmail.service';
 import { EmailParserService } from '../gmail/email-parser.service';
 import { ApplicationsRepository } from '../applications/applications.repository';
 import { NotificationsService } from '../notifications/notifications.service';
+import { timingSafeEqual } from 'crypto';
 
 @Controller('webhooks')
 export class WebhooksController {
@@ -14,10 +15,16 @@ export class WebhooksController {
     private readonly applicationsRepo: ApplicationsRepository,
     private readonly notifications: NotificationsService,
   ) {}
-
+    private isValidToken(token?: string): boolean {
+      const expected = process.env.WEBHOOK_TOKEN;
+      if (!expected || !token) return false;
+      const a = Buffer.from(token);
+      const b = Buffer.from(expected);
+      return a.length === b.length && timingSafeEqual(a, b);
+    }
   @Post('gmail')
-  async handleGmailPush(@Body() body: any) {
-    this.logger.log(`Body recibido: ${JSON.stringify(body)}`);
+  async handleGmailPush(@Body() body: any, @Query('token') token?: string) {
+    if (!this.isValidToken(token)) throw new UnauthorizedException();
     try {
       const data = body?.message?.data;
       if (!data) return { ok: true };

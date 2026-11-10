@@ -13,11 +13,8 @@ async function bootstrap() {
       transform: true,
     }),
   );
-
-  app.enableCors({
-    origin: true,
-    credentials: true,
-  });
+  const origins = process.env.CORS_ORIGIN?.split(',').map((o) => o.trim());
+  app.enableCors({ origin: origins?.length ? origins : true, credentials: true });
 
   await app.listen(process.env.PORT ?? 3000);
 }
