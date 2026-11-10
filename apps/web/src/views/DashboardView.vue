@@ -33,12 +33,7 @@
         </div>
         <div class="metric-value-row">
           <span class="metric-value">{{ metric.value }}</span>
-          <span 
-            class="metric-badge" 
-            :class="metric.trend > 0 ? 'badge-green' : 'badge-gray'"
-          >
-            {{ metric.trend > 0 ? '+' : '' }}{{ metric.trend }}%
-          </span>
+
         </div>
       </div>
     </section>
