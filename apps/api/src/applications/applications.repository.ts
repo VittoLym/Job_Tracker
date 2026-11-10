@@ -9,15 +9,25 @@ export class ApplicationsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   findAll(status?: ApplicationStatus) {
-    try {
-      return this.prisma.application.findMany({
-        where: status ? { status } : undefined,
-        include: { statusHistory: true },
-        orderBy: { appliedAt: 'desc' },
-      });
-    } catch (e) {
-      console.log(e, 'este s el error');
-    }
+    return this.prisma.application.findMany({
+      where: status ? { status } : undefined,
+      include: { statusHistory: true },
+      orderBy: { appliedAt: 'desc' },
+    });
+  }
+
+  create(dto: CreateApplicationDto) {
+    return this.prisma.application.create({
+      data: {
+        ...dto,
+        statusHistory: {
+          create: {
+            toStatus: dto.status ?? ApplicationStatus.APPLIED,
+          },
+        },
+      },
+      include: { statusHistory: true },
+    });
   }
 
   findOne(id: string) {
@@ -25,29 +35,6 @@ export class ApplicationsRepository {
       where: { id },
       include: { statusHistory: true, notifications: true },
     });
-  }
-
-  create(dto: CreateApplicationDto) {
-    try {
-      console.log('Creating application');
-      return this.prisma.application.create({
-        data: {
-          ...dto,
-          statusHistory: {
-            create: {
-              toStatus: dto.status ?? ApplicationStatus.APPLIED,
-            },
-          },
-        },
-        include: { statusHistory: true },
-      });
-    } catch (error) {
-      console.error('================================');
-      console.error('PRISMA ERROR');
-      console.error(error);
-      console.error('================================');
-      throw error;
-    }
   }
 
   async update(id: string, dto: UpdateApplicationDto) {
