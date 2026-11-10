@@ -40,6 +40,12 @@ export class GmailService {
         labelIds: ['INBOX'],
       },
     });
+    const initialHistoryId = res.data.historyId?.toString();
+    if (initialHistoryId) {
+      await this.redis.set('gmail:lastHistoryId', initialHistoryId);
+      this.logger.log(`Gmail watch activo hasta: ${new Date(Number(res.data.expiration)).toISOString()}`);
+    }
+  }
 
   async getNewMessages(newHistoryId: string): Promise<{ from: string; subject: string; snippet: string; body: string }[]> {
     const auth = this.getOAuthClient();
