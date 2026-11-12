@@ -3,13 +3,29 @@ import { Injectable, Logger } from '@nestjs/common';
 import { google } from 'googleapis';
 import { Redis } from 'ioredis';
 
+type GmailMessage = {
+  id: string;
+  from: string;
+  subject: string;
+  snippet: string;
+  body: string;
+};
+
+type GmailSyncBatch = {
+  messages: GmailMessage[];
+  historyId: string;
+};
 @Injectable()
 export class GmailService {
   private readonly logger = new Logger(GmailService.name);
   private readonly redis: Redis;
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+    this.redis = new Redis({
+      host: process.env.REDIS_HOST ?? 'localhost',
+      port: Number(process.env.REDIS_PORT) || 6379,
+    });
   }
+  
   private getOAuthClient() {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
@@ -42,50 +58,90 @@ export class GmailService {
     });
     const initialHistoryId = res.data.historyId?.toString();
     if (initialHistoryId) {
-      await this.redis.set('gmail:lastHistoryId', initialHistoryId);
-      this.logger.log(`Gmail watch activo hasta: ${new Date(Number(res.data.expiration)).toISOString()}`);
+      const existingHistoryId = await this.redis.get(
+        'gmail:lastHistoryId',
+      );
+
+      if (!existingHistoryId) {
+        await this.redis.set(
+          'gmail:lastHistoryId',
+          initialHistoryId,
+        );
+      }
+      this.logger.log('Gmail Watch activado correctamente')
+    }
+    else{
+      this.logger.warn('No hay historyId guardado.');
     }
   }
 
-  async getNewMessages(newHistoryId: string): Promise<{ from: string; subject: string; snippet: string; body: string }[]> {
+  async getNewMessages(
+    newHistoryId: string,
+  ): Promise<GmailSyncBatch> {
     const auth = this.getOAuthClient();
     const gmail = google.gmail({ version: 'v1', auth });
 
-    try {
-      const lastHistoryId = await this.redis.get('gmail:lastHistoryId');
+    const lastHistoryId = await this.redis.get('gmail:lastHistoryId');
 
-      if (!lastHistoryId) {
-        this.logger.warn('No hay historyId guardado, guardando el actual');
-        await this.redis.set('gmail:lastHistoryId', newHistoryId);
-        return [];
-      }
+    if (!lastHistoryId) {
+      throw new Error(
+        'No existe lastHistoryId. Es necesario inicializar la sincronización.',
+      );
+    }
 
-      this.logger.log(`Buscando history desde ${lastHistoryId} hasta ${newHistoryId}`);
+    this.logger.log(
+      `Buscando history desde ${lastHistoryId} hasta ${newHistoryId}`,
+    );
 
-      const history = await gmail.users.history.list({
+    const messageIds = new Set<string>();
+    let pageToken: string | undefined;
+
+    do {
+      const response = await gmail.users.history.list({
         userId: 'me',
         startHistoryId: lastHistoryId,
         historyTypes: ['messageAdded'],
         labelId: 'INBOX',
+        pageToken,
       });
-
-      await this.redis.set('gmail:lastHistoryId', newHistoryId);
-
-      const messages = history.data.history?.flatMap(h => h.messagesAdded ?? []) ?? [];
-      this.logger.log(`Mensajes nuevos encontrados: ${messages.length}`);
-
-      const results = await Promise.all(
-        messages
-          .filter(m => m.message?.id)
-          .map(m => this.getMessage(m.message!.id!))
+      if(response.data.historyId != null && response.data.historyId < lastHistoryId){
+        this.logger.warn('Mensaje ya analizado')
+        throw new Error(
+        'El mensaje ya ha sido trabajado.',
       );
+      }
+      for (const history of response.data.history ?? []) {
+        for (const added of history.messagesAdded ?? []) {
+          const id = added.message?.id;
+          if (id) {
+            messageIds.add(id);
+          }
+        }
+      }
 
-      return results;
-    } catch (err) {
-      this.logger.warn(`Error obteniendo history: ${err?.message}`);
-      await this.redis.set('gmail:lastHistoryId', newHistoryId);
-      return [];
-    }
+      pageToken = response.data.nextPageToken ?? undefined;
+    } while (pageToken);
+
+    this.logger.log(
+      `Mensajes nuevos encontrados: ${messageIds.size}`,
+    );
+    const messages = await Promise.all(
+      [...messageIds].map(async (id) => ({
+        id,
+        ...(await this.getMessage(id)),
+      })),
+    );
+
+    return {
+      messages,
+      historyId: newHistoryId,
+    };
+  }
+
+  async commitHistoryId(historyId: string): Promise<void> {
+    await this.redis.set('gmail:lastHistoryId', historyId);
+
+    this.logger.log(`HistoryId confirmado: ${historyId}`);
   }
 
   async getMessage(messageId: string): Promise<{ from: string; subject: string; body: string, snippet: string }> {

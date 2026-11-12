@@ -22,41 +22,57 @@ export class WebhooksController {
       const b = Buffer.from(expected);
       return a.length === b.length && timingSafeEqual(a, b);
     }
-  @Post('gmail')
-  async handleGmailPush(@Body() body: any, @Query('token') token?: string) {
-    if (!this.isValidToken(token)) throw new UnauthorizedException();
+
+@Post('gmail')
+  async handleGmailPush(
+    @Body() body: any,
+    @Query('token') token?: string,
+  ) {
+    if (!this.isValidToken(token)) {
+      throw new UnauthorizedException();
+    }
+    const data = body?.message?.data;
+    if (!data) {
+      this.logger.warn('Webhook recibido sin message.data');
+      return { ok: true };
+    }
     try {
-      const data = body?.message?.data;
-      if (!data) return { ok: true };
-
-      const decoded = JSON.parse(Buffer.from(data, 'base64').toString('utf-8'));
-      this.logger.log(`Decoded: ${JSON.stringify(decoded)}`);
-
+      const decoded = JSON.parse(
+        Buffer.from(data, 'base64').toString('utf-8'),
+      );
       const historyId = decoded.historyId?.toString();
-      if (!historyId) return { ok: true };
+      if (!historyId) {
+        this.logger.warn('Notificación sin historyId');
+        return { ok: true };
+      }
+      const batch = await this.gmailService.getNewMessages(historyId);
+      const applications = await this.applicationsRepo.findAll();
+      for (const email of batch.messages) {
+        const {
+          from,
+          subject,
+          snippet,
+          body: emailBody,
+        } = email;
 
-      const messages = await this.gmailService.getNewMessages(historyId);
-
-      for (const { from, subject, snippet, body } of messages) {
-        this.logger.log(
-          `Email: de= ${from} | asunto= ${subject} | snippet= ${snippet}`,
-        );
-
-        const { detectedStatus, companyHint, role, shouldCreate, urlJob } = this.parser.parse(from, subject, snippet, body);
+        const {
+          detectedStatus,
+          companyHint,
+          role,
+          shouldCreate,
+          urlJob,
+        } = this.parser.parse(from, subject, snippet, emailBody);
 
         if (!detectedStatus || !companyHint) {
-          this.logger.log('Email no relevante, ignorando');
           continue;
         }
 
-        const applications = await this.applicationsRepo.findAll();
-        const match = applications!.find(
-          (app) =>
-            app.company.toLowerCase().includes(companyHint.toLowerCase()) ||
-            companyHint.toLowerCase().includes(app.company.toLowerCase()),
+        const normalizedHint = companyHint.trim().toLowerCase();
+
+        const match = applications.find(
+          (app) => app.company.trim().toLowerCase() === normalizedHint,
         );
 
-        // Crear si no existe y el email lo indica
         if (!match && shouldCreate) {
           await this.applicationsRepo.create({
             company: companyHint,
@@ -66,21 +82,16 @@ export class WebhooksController {
             notes: 'Creado automáticamente desde LinkedIn',
             url: urlJob ?? '',
           });
-          this.logger.log(
-            `✅ Nueva application creada automáticamente: ${companyHint} — ${role}`,
-          );
+
           continue;
         }
 
         if (!match) {
-          this.logger.warn(`No se encontró application para: ${companyHint}`);
+          this.logger.warn(`No se encontró coincidencia para una empresa`);
           continue;
         }
 
         if (match.status === detectedStatus) {
-          this.logger.log(
-            `Application ya tiene status ${detectedStatus}, ignorando`,
-          );
           continue;
         }
 
@@ -96,13 +107,17 @@ export class WebhooksController {
           toStatus: detectedStatus,
         });
 
-        this.logger.log(`✅ ${match.company}: ${match.status} → ${detectedStatus}`);
+        // Mantener actualizado el estado local.
+        match.status = detectedStatus;
       }
-
+      await this.gmailService.commitHistoryId(batch.historyId);
       return { ok: true };
     } catch (err) {
-      this.logger.error('Error procesando webhook de Gmail', err?.message ?? err);
-      return { ok: true };
+      this.logger.error(
+        'Error procesando webhook de Gmail',
+        err instanceof Error ? err.stack : String(err),
+      );
+      throw err;
     }
   }
 }

@@ -37,7 +37,6 @@ services:
       - apps/api/.env
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/jobtracker
-      REDIS_URL: redis://redis:6379
       NODE_ENV: production
       REDIS_HOST: redis
       REDIS_PORT: 6379
