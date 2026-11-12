@@ -2,7 +2,7 @@
 
 A personal web app to keep track of job applications: where you applied, what stage each process is in, and what changed. It can also watch a Gmail inbox and update applications from the emails it receives (LinkedIn confirmations, interview invitations, offers, rejections).
 ---
-![CI](https://github.com/VittoLym/Job_Tracker/actions/workflows/ci.yml/badge.svg).
+![CI](https://github.com/VittoLym/Job_Tracker/actions/workflows/ci.yml/badge.svg)
 > **Status:** personal project for a single user. There is no user authentication. Read [Known limitations](#known-limitations) before exposing it anywhere.
 
 ## Features
