@@ -18,11 +18,8 @@ describe('OutboxDispatcherService', () => {
   });
 
   const dispatcher = new OutboxDispatcherService(prisma, queue);
-
   const aggregateId = randomUUID();
-
-  let eventId: string;
-  let jobId: string;
+  const eventIds: string[] = [];
 
   beforeAll(async () => {
     await prisma.$connect();
@@ -30,14 +27,11 @@ describe('OutboxDispatcherService', () => {
   });
 
   afterAll(async () => {
-    if (jobId) {
-      const job = await queue.getJob(jobId);
-      if (job) await job.remove();
-    }
+    await queue.obliterate({ force: true });
 
-    if (eventId) {
+    if (eventIds.length > 0) {
       await prisma.outboxEvent.deleteMany({
-        where: { id: eventId },
+        where: { id: { in: eventIds } },
       });
     }
 
@@ -60,54 +54,11 @@ describe('OutboxDispatcherService', () => {
         },
       },
     });
-    eventId = event.id;
-    jobId = `outbox-${event.id}`;
-    const createdEvent = await prisma.outboxEvent.findUniqueOrThrow({
-        where: { id: event.id },
-    });
-    const databaseCheck = await prisma.$queryRaw<
-    {
-        id: string;
-        status: string;
-        availableAt: Date;
-        databaseNow: Date;
-        isPending: boolean;
-        isAvailable: boolean;
-    }[]
-    >`
-    SELECT
-        "id",
-        "status"::text AS "status",
-        "availableAt",
-        NOW() AS "databaseNow",
-        ("status" = 'PENDING') AS "isPending",
-        ("availableAt" <= NOW()) AS "isAvailable"
-    FROM "OutboxEvent"
-    WHERE "id" = ${event.id}
-    `;
+
+    eventIds.push(event.id);
+
     const dispatchedCount = await dispatcher.dispatchPendingEvents();
-    const eligibleEvents = await prisma.$queryRaw<
-    { id: string; status: string; availableAt: Date }[]
-    >`
-    SELECT "id", "status", "availableAt"
-    FROM "OutboxEvent"
-    WHERE "status" = 'PENDING'
-        AND "availableAt" <= NOW()
-    ORDER BY "createdAt" ASC
-    `;
-        const columnTypes = await prisma.$queryRaw`
-    SELECT
-        column_name,
-        data_type
-    FROM information_schema.columns
-    WHERE table_name = 'OutboxEvent'
-        AND column_name IN (
-        'availableAt',
-        'lockedAt',
-        'publishedAt',
-        'updatedAt'
-        )
-    `;
+
     expect(dispatchedCount).toBe(1);
 
     const updatedEvent = await prisma.outboxEvent.findUniqueOrThrow({
@@ -119,11 +70,144 @@ describe('OutboxDispatcherService', () => {
     expect(updatedEvent.lockedAt).toBeNull();
     expect(updatedEvent.publishedAt).not.toBeNull();
 
-    const job = await queue.getJob(jobId);
+    const job = await queue.getJob(`outbox-${event.id}`);
 
     expect(job).not.toBeNull();
     expect(job?.name).toBe('status-change');
     expect(job?.data.applicationId).toBe(aggregateId);
     expect(job?.data.toStatus).toBe('INTERVIEW');
   });
+
+  it('should recover an expired event with attempts remaining', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {},
+        status: OutboxStatus.PROCESSING,
+        attempts: 1,
+        lockedAt: new Date(Date.now() - 120_000),
+      },
+    });
+
+    eventIds.push(event.id);
+
+    await dispatcher.dispatchPendingEvents();
+
+    const recoveredEvent = await prisma.outboxEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+
+    expect(recoveredEvent.status).toBe(OutboxStatus.PENDING);
+    expect(recoveredEvent.attempts).toBe(1);
+    expect(recoveredEvent.lockedAt).toBeNull();
+    expect(recoveredEvent.lastError).toBe(
+      'Previous dispatcher lease expired',
+    );
+    expect(recoveredEvent.availableAt.getTime()).toBeGreaterThan(
+      Date.now(),
+    );
+  });
+
+  it('should mark an expired event as DEAD when maximum attempts are reached', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {},
+        status: OutboxStatus.PROCESSING,
+        attempts: 5,
+        lockedAt: new Date(Date.now() - 120_000),
+      },
+    });
+
+    eventIds.push(event.id);
+
+    await dispatcher.dispatchPendingEvents();
+
+    const recoveredEvent = await prisma.outboxEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+
+    expect(recoveredEvent.status).toBe(OutboxStatus.DEAD);
+    expect(recoveredEvent.attempts).toBe(5);
+    expect(recoveredEvent.lockedAt).toBeNull();
+    expect(recoveredEvent.lastError).toBe(
+      'Lease expired; maximum attempts reached',
+    );
+  });
+
+  it('should retry a failed dispatch with exponential backoff', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {},
+      },
+    });
+
+    eventIds.push(event.id);
+
+    const addSpy = jest
+      .spyOn(queue, 'add')
+      .mockRejectedValueOnce(new Error('Redis unavailable'));
+
+    try {
+      await dispatcher.dispatchPendingEvents();
+
+      const updatedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+        where: { id: event.id },
+      });
+
+      expect(updatedEvent.status).toBe(OutboxStatus.PENDING);
+      expect(updatedEvent.attempts).toBe(1);
+      expect(updatedEvent.lockedAt).toBeNull();
+      expect(updatedEvent.lastError).toBe('Redis unavailable');
+
+      const delay = updatedEvent.availableAt.getTime() - Date.now();
+
+      expect(delay).toBeGreaterThan(4_000);
+      expect(delay).toBeLessThanOrEqual(5_000);
+    } finally {
+      addSpy.mockRestore();
+    }
+  });
+
+  it('should mark an event as DEAD after the fifth failed dispatch', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {},
+        attempts: 4,
+        availableAt: new Date(Date.now() - 10_000),
+      },
+    });
+
+    eventIds.push(event.id);
+
+    const addSpy = jest
+      .spyOn(queue, 'add')
+      .mockRejectedValueOnce(new Error('Redis unavailable'));
+
+    try {
+      await dispatcher.dispatchPendingEvents();
+
+      const updatedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+        where: { id: event.id },
+      });
+
+      expect(updatedEvent.status).toBe(OutboxStatus.DEAD);
+      expect(updatedEvent.attempts).toBe(5);
+      expect(updatedEvent.lockedAt).toBeNull();
+      expect(updatedEvent.lastError).toBe('Redis unavailable');
+    } finally {
+      addSpy.mockRestore();
+    }
+  });
+
 });
