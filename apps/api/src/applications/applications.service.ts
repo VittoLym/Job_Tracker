@@ -33,21 +33,13 @@ export class ApplicationsService {
   async update(id: string, dto: UpdateApplicationDto) {
     const current = await this.findOne(id);
     const updated = await this.repo.update(id, dto);
-    if (dto.status  && dto.status !== current.status) {
-      await this.notifications.notifyStatusChange({
-        applicationId: id,
-        company: updated.company,
-        role: updated.role,
-        fromStatus: current.status,
-        toStatus: dto.status,
-      });
+
+    if (dto.status !== undefined && dto.status !== current.status) {
+      this.metrics.incrementStatusChange(current.status, updated.status);
     }
-    if(dto.status != undefined) this.metrics.incrementStatusChange(current.status, dto.status);
-    
+
     return updated;
   }
-
-
   async remove(id: string) {
     await this.findOne(id);
     return this.repo.delete(id);

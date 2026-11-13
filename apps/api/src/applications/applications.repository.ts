@@ -1,8 +1,13 @@
+
 import { Injectable } from '@nestjs/common';
+import {
+  ApplicationStatus,
+  Prisma,
+} from '@prisma/client';
+
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationDto } from './dto/update-application.dto';
-import { ApplicationStatus } from '@prisma/client';
 
 @Injectable()
 export class ApplicationsRepository {
@@ -13,6 +18,13 @@ export class ApplicationsRepository {
       where: status ? { status } : undefined,
       include: { statusHistory: true },
       orderBy: { appliedAt: 'desc' },
+    });
+  }
+
+  findOne(id: string) {
+    return this.prisma.application.findUnique({
+      where: { id },
+      include: { statusHistory: true, notifications: true },
     });
   }
 
@@ -30,40 +42,65 @@ export class ApplicationsRepository {
     });
   }
 
-  findOne(id: string) {
-    return this.prisma.application.findUnique({
-      where: { id },
-      include: { statusHistory: true, notifications: true },
-    });
-  }
-
   async update(id: string, dto: UpdateApplicationDto) {
-    return this.prisma.$transaction(async (tx) => {
-      const current = await tx.application.findUniqueOrThrow({
-        where: { id },
-      });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const current = await tx.application.findUniqueOrThrow({
+          where: { id },
+        });
 
-      return tx.application.update({
-        where: { id },
-        data: {
-          ...dto,
-          ...(dto.status && dto.status !== current?.status
-            ? {
-                statusHistory: {
-                  create: {
-                    fromStatus: current?.status,
-                    toStatus: dto.status,
+        const statusChanged =
+          dto.status !== undefined &&
+          dto.status !== current.status;
+
+        const updated = await tx.application.update({
+          where: { id },
+          data: {
+            ...dto,
+            ...(statusChanged
+              ? {
+                  statusHistory: {
+                    create: {
+                      fromStatus: current.status,
+                      toStatus: dto.status!,
+                    },
                   },
-                },
-              }
-            : {}),
-        },
-        include: { statusHistory: true },
-      });
-    });
+                }
+              : {}),
+          },
+          include: { statusHistory: true },
+        });
+
+        if (statusChanged) {
+          const payload = {
+            applicationId: updated.id,
+            company: updated.company,
+            role: updated.role,
+            fromStatus: current.status,
+            toStatus: updated.status,
+          };
+
+          await tx.outboxEvent.create({
+            data: {
+              aggregateType: 'Application',
+              aggregateId: updated.id,
+              eventType: 'APPLICATION_STATUS_CHANGED',
+              payload,
+            },
+          });
+        }
+
+        return updated;
+      },
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
   }
 
   delete(id: string) {
-    return this.prisma.application.delete({ where: { id } });
+    return this.prisma.application.delete({
+      where: { id },
+    });
   }
 }

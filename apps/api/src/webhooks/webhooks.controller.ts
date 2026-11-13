@@ -42,29 +42,23 @@ export class WebhooksController {
     if (!this.isValidToken(token)) {
       throw new UnauthorizedException();
     }
-
     const data = body?.message?.data;
-
     if (!data) {
       this.logger.warn('Webhook recibido sin message.data');
       return { ok: true };
     }
-
     try {
       const decoded = JSON.parse(
         Buffer.from(data, 'base64').toString('utf-8'),
       );
-
       const historyId = decoded.historyId?.toString();
-
       if (!historyId) {
         this.logger.warn('Notificación sin historyId');
         return { ok: true };
       }
-
       const batch = await this.gmailService.getNewMessages(historyId);
+      this.logger.log(batch)
       const applications = await this.applicationsService.findAll();
-
       for (const email of batch.messages) {
         const {
           from,
@@ -80,15 +74,12 @@ export class WebhooksController {
           shouldCreate,
           urlJob,
         } = this.parser.parse(from, subject, snippet, emailBody);
-
         if (!detectedStatus || !companyHint) continue;
-
         const normalizedHint = companyHint.trim().toLowerCase();
 
         const match = applications.find(
           (app) => app.company.trim().toLowerCase() === normalizedHint,
         );
-
         if (!match && shouldCreate) {
           const created = await this.applicationsService.create({
             company: companyHint,
@@ -117,10 +108,8 @@ export class WebhooksController {
         });
 
         // Mantiene el estado local sincronizado con la base de datos.
-        if(updated == undefined || updated == null) return
         match.status = updated.status;
       }
-
       await this.gmailService.commitHistoryId(batch.historyId);
 
       return { ok: true };

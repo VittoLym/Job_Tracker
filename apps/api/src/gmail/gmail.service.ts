@@ -75,73 +75,76 @@ export class GmailService {
     }
   }
 
-  async getNewMessages(
-    newHistoryId: string,
-  ): Promise<GmailSyncBatch> {
-    const auth = this.getOAuthClient();
-    const gmail = google.gmail({ version: 'v1', auth });
-
+  async getNewMessages(newHistoryId: string): Promise<GmailSyncBatch> {
     const lastHistoryId = await this.redis.get('gmail:lastHistoryId');
-
     if (!lastHistoryId) {
-      throw new Error(
-        'No existe lastHistoryId. Es necesario inicializar la sincronización.',
-      );
+      throw new Error('No existe lastHistoryId. Es necesario inicializar la sincronización.');
     }
 
-    this.logger.log(
-      `Buscando history desde ${lastHistoryId} hasta ${newHistoryId}`,
-    );
+    // Notificación repetida o desordenada: no hay nada nuevo que leer.
+    if (BigInt(newHistoryId) <= BigInt(lastHistoryId)) {
+      this.logger.log(`Notificación ${newHistoryId} ya cubierta por ${lastHistoryId}`);
+      return { messages: [], historyId: lastHistoryId };
+    }
 
+    const auth = this.getOAuthClient();
+    const gmail = google.gmail({ version: 'v1', auth });
     const messageIds = new Set<string>();
     let pageToken: string | undefined;
 
-    do {
-      const response = await gmail.users.history.list({
-        userId: 'me',
-        startHistoryId: lastHistoryId,
-        historyTypes: ['messageAdded'],
-        labelId: 'INBOX',
-        pageToken,
-      });
-      if(response.data.historyId != null && response.data.historyId < lastHistoryId){
-        this.logger.warn('Mensaje ya analizado')
-        throw new Error(
-        'El mensaje ya ha sido trabajado.',
-      );
-      }
-      for (const history of response.data.history ?? []) {
-        for (const added of history.messagesAdded ?? []) {
-          const id = added.message?.id;
-          if (id) {
-            messageIds.add(id);
+    try {
+      do {
+        const response = await gmail.users.history.list({
+          userId: 'me',
+          startHistoryId: lastHistoryId,
+          historyTypes: ['messageAdded'],
+          labelId: 'INBOX',
+          pageToken,
+        });
+        for (const history of response.data.history ?? []) {
+          for (const added of history.messagesAdded ?? []) {
+            if (added.message?.id) messageIds.add(added.message.id);
           }
         }
+        pageToken = response.data.nextPageToken ?? undefined;
+      } while (pageToken);
+    } catch (err) {
+      if (this.isNotFound(err)) {
+        // Gmail ya no conserva ese historial: se retoma desde la notificación actual.
+        this.logger.warn(`El historyId ${lastHistoryId} expiró, se reinicia desde ${newHistoryId}`);
+        return { messages: [], historyId: newHistoryId };
       }
+      throw err;
+    }
 
-      pageToken = response.data.nextPageToken ?? undefined;
-    } while (pageToken);
-
-    this.logger.log(
-      `Mensajes nuevos encontrados: ${messageIds.size}`,
-    );
-    const messages = await Promise.all(
-      [...messageIds].map(async (id) => ({
-        id,
-        ...(await this.getMessage(id)),
-      })),
+    const ids = [...messageIds];
+    const results = await Promise.allSettled(
+      ids.map(async (id) => ({ id, ...(await this.getMessage(id)) })),
     );
 
-    return {
-      messages,
-      historyId: newHistoryId,
-    };
+    const messages: GmailMessage[] = [];
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        messages.push(result.value);
+      } else if (this.isNotFound(result.reason)) {
+        this.logger.warn(`El mensaje ${ids[i]} ya no existe, se omite`);
+      } else {
+        throw result.reason; // error transitorio: que Pub/Sub reintente
+      }
+    });
+
+    return { messages, historyId: newHistoryId };
   }
 
   async commitHistoryId(historyId: string): Promise<void> {
+    const current = await this.redis.get('gmail:lastHistoryId');
+    if (current && BigInt(historyId) <= BigInt(current)) return; // el cursor nunca retrocede
     await this.redis.set('gmail:lastHistoryId', historyId);
-
     this.logger.log(`HistoryId confirmado: ${historyId}`);
+  }
+
+  private isNotFound(err: any): boolean {
+    return err?.code === 404 || err?.status === 404 || err?.response?.status === 404;
   }
 
   async getMessage(messageId: string): Promise<{ from: string; subject: string; body: string, snippet: string }> {
@@ -167,7 +170,6 @@ export class GmailService {
 
   private extractBody(payload: any): string {
     if (!payload) return '';
-
     // Si tiene parts (multipart)
     if (payload.parts) {
       for (const part of payload.parts) {
@@ -195,7 +197,6 @@ export class GmailService {
     if (payload.body?.data) {
       return Buffer.from(payload.body.data, 'base64').toString('utf-8');
     }
-
     return '';
   }
 }

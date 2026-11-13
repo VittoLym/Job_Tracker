@@ -23,7 +23,8 @@ export class EmailParserService {
       (subjectLower.includes('se ha enviado tu solicitud') ||
         subjectLower.includes('your application was sent') ||
         subjectLower.includes('solicitud a') ||
-        subjectLower.includes('application to'))
+        subjectLower.includes('application to')||
+        subjectLower.includes('peripecia'))
     ) {
       const company = this.extractCompanyFromSubject(subject);
       const role = this.extractRoleFromSnippet(body);
