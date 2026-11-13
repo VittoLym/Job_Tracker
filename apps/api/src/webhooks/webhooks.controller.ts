@@ -80,7 +80,7 @@ export class WebhooksController {
             status: 'APPLIED',
             workMode: 'REMOTE',
             notes: 'Creado automáticamente desde LinkedIn',
-            url: urlJob ?? '',
+            ...(urlJob ? { url: urlJob } : {}),
           });
 
           continue;

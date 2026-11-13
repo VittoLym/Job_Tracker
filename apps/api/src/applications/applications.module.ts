@@ -4,10 +4,9 @@ import { ApplicationsService } from './applications.service';
 import { ApplicationsRepository } from './applications.repository';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { MetricsModule } from '../metrics/metrics.module';
-import { GmailModule } from '../gmail/gmail.module';
 
 @Module({
-  imports: [NotificationsModule, MetricsModule, GmailModule],
+  imports: [NotificationsModule, MetricsModule],
   controllers: [ApplicationsController],
   providers: [ApplicationsService, ApplicationsRepository],
   exports: [ApplicationsRepository],
