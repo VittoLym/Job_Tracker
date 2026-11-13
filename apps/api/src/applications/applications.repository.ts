@@ -39,7 +39,9 @@ export class ApplicationsRepository {
 
   async update(id: string, dto: UpdateApplicationDto) {
     return this.prisma.$transaction(async (tx) => {
-      const current = await tx.application.findUnique({ where: { id } });
+      const current = await tx.application.findUniqueOrThrow({
+        where: { id },
+      });
 
       return tx.application.update({
         where: { id },
