@@ -57,68 +57,34 @@ export class WebhooksController {
         return { ok: true };
       }
       const batch = await this.gmailService.getNewMessages(historyId);
-      this.logger.log(batch)
-      const applications = await this.applicationsService.findAll();
       for (const email of batch.messages) {
-        const {
-          from,
-          subject,
-          snippet,
-          body: emailBody,
-        } = email;
-
-        const {
-          detectedStatus,
-          companyHint,
-          role,
-          shouldCreate,
-          urlJob,
-        } = this.parser.parse(from, subject, snippet, emailBody);
-        if (!detectedStatus || !companyHint) continue;
-        const normalizedHint = companyHint.trim().toLowerCase();
-
-        const match = applications.find(
-          (app) => app.company.trim().toLowerCase() === normalizedHint,
+        const parsed = this.parser.parse(
+          email.from,
+          email.subject,
+          email.snippet,
+          email.body,
         );
-        if (!match && shouldCreate) {
-          const created = await this.applicationsService.create({
-            company: companyHint,
-            role: role ?? 'No especificado',
-            status: ApplicationStatus.APPLIED,
-            workMode: WorkMode.REMOTE,
-            notes: 'Creado automáticamente desde LinkedIn',
-            ...(urlJob ? { url: urlJob } : {}),
-          });
-
-          // Evita duplicados dentro del lote actual.
-          applications.push(created);
-
-          continue;
-        }
-
-        if (!match) {
-          this.logger.warn('No se encontró coincidencia para una empresa');
-          continue;
-        }
-
-        if (match.status === detectedStatus) continue;
-
-        const updated = await this.applicationsService.update(match.id, {
-          status: detectedStatus,
+        const result = await this.applicationsService.processGmailMessage({
+          gmailMessageId: email.id,
+          historyId: batch.historyId,
+          ...parsed,
         });
-
-        // Mantiene el estado local sincronizado con la base de datos.
-        match.status = updated.status;
+        if(result == undefined) throw new Error
+        if (result.duplicate) {
+          this.logger.debug(`Mensaje ${email.id} ya procesado`);
+          continue;
+        }
+        this.logger.log(
+          `Mensaje ${email.id}: ${result.result} — ${result.reason}`,
+        );
       }
       await this.gmailService.commitHistoryId(batch.historyId);
-
       return { ok: true };
     } catch (err) {
       this.logger.error(
         'Error procesando webhook de Gmail',
         err instanceof Error ? err.stack : String(err),
       );
-
       throw err;
     }
   }
