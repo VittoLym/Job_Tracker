@@ -42,8 +42,8 @@ export class ApplicationsService {
         toStatus: dto.status,
       });
     }
+    if(dto.status != undefined) this.metrics.incrementStatusChange(current.status, dto.status);
     
-    this.metrics.incrementStatusChange(current.status, dto.status);
     return updated;
   }
 
