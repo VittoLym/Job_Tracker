@@ -209,5 +209,51 @@ describe('OutboxDispatcherService', () => {
       addSpy.mockRestore();
     }
   });
+    it('should dispatch pending events when the scheduled handler runs', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {
+          applicationId: aggregateId,
+          toStatus: 'INTERVIEW',
+        },
+      },
+    });
 
+    eventIds.push(event.id);
+
+    await dispatcher.scheduledDispatch();
+
+    const updatedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+
+    expect(updatedEvent.status).toBe(OutboxStatus.PUBLISHED);
+    expect(updatedEvent.attempts).toBe(1);
+
+    const job = await queue.getJob(`outbox-${event.id}`);
+    expect(job).not.toBeNull();
+  });
+
+  it('should prevent overlapping scheduled dispatches', async () => {
+    const dispatchSpy = jest
+      .spyOn(dispatcher, 'dispatchPendingEvents')
+      .mockImplementation(async () => {
+        await new Promise<void>((resolve) => setTimeout(resolve, 50));
+        return 1;
+      });
+
+    try {
+      const firstExecution = dispatcher.scheduledDispatch();
+      const secondExecution = dispatcher.scheduledDispatch();
+
+      await Promise.all([firstExecution, secondExecution]);
+
+      expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      dispatchSpy.mockRestore();
+    }
+  });
 });

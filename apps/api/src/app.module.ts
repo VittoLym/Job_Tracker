@@ -14,6 +14,7 @@ import { GmailModule } from './gmail/gmail.module';
 import { GmailService } from './gmail/gmail.service';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { DemoReadOnlyGuard } from './common/demo-readonly.guard';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { APP_GUARD } from '@nestjs/core';
         }),
       },
     }),
+    ScheduleModule.forRoot(),
     PrometheusModule.register({
       path: '/metrics',
       defaultMetrics: { enabled: true },

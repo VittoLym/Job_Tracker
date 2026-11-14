@@ -1,21 +1,41 @@
 # Job Tracker
 
 A personal web app to keep track of job applications: where you applied, what stage each process is in, and what changed. It can also watch a Gmail inbox and update applications from the emails it receives (LinkedIn confirmations, interview invitations, offers, rejections).
----
-![CI](https://github.com/VittoLym/Job_Tracker/actions/workflows/ci.yml/badge.svg)
+
+[![CI](https://github.com/VittoLym/Job_Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/VittoLym/Job_Tracker/actions/workflows/ci.yml)
+
 > **Status:** personal project for a single user. There is no user authentication. Read [Known limitations](#known-limitations) before exposing it anywhere.
 
 ## Features
 
 - **Applications**: create, list, update and delete applications with company, role, job URL, status, work mode, salary and notes. Every status change is stored in a history.
 - **Statuses**: `APPLIED`, `ASSESSMENT`, `INTERVIEW`, `OFFER`, `REJECTED`, `GHOSTED`. Work modes: `REMOTE`, `HYBRID`, `ONSITE`.
-- **Web app**: a dashboard and an applications list (Vue 3, Pinia).
-- **Gmail integration (optional)**: Gmail push notifications (Pub/Sub) call a webhook. A keyword-based parser (Spanish and English) detects new LinkedIn applications and status changes, matches the company by name and updates or creates the application. It only asks for the read-only `gmail.readonly` scope.
-- **Notifications queue**: every status change is enqueued in a BullMQ queue (`notifications`, 3 attempts with exponential backoff). The worker currently logs the change; it does not send anything yet.
-- **Observability**: structured logs with Pino and a correlation id per request, Prometheus metrics at `/metrics` (default metrics plus counters for created applications and status changes) and a health check at `/health`.
-- **Demo mode**: with `DEMO_MODE=true` the API becomes read-only.
+- **Web app**: dashboard and applications list built with Vue 3, Pinia and Vue Router.
+- **Gmail integration (optional)**: Gmail push notifications through Google Pub/Sub trigger the webhook. The Gmail History API retrieves changes, and a keyword-based parser (Spanish and English) detects LinkedIn application confirmations and status updates. It only requests the read-only `gmail.readonly` scope.
+- **Gmail idempotency**: processed Gmail message IDs are stored in PostgreSQL to prevent duplicate processing.
+- **Transactional Outbox**: application status changes and their corresponding outbox events are persisted in the same database transaction.
+- **Background dispatching**: a scheduled dispatcher checks pending outbox events every 10 seconds and publishes them to BullMQ. PostgreSQL row locking with `SKIP LOCKED` coordinates event claiming. Expired leases are recovered, with exponential retry delays and a maximum of five dispatch attempts.
+- **Notifications queue**: BullMQ processes `status-change` jobs. The current worker only logs the status change; it does not send emails or in-app notifications yet.
+- **Observability**: structured logs with Pino and a correlation ID per request, Prometheus metrics at `/metrics`, and a database health check at `/health`.
+- **Demo mode**: with `DEMO_MODE=true`, the API becomes read-only.
 
-## Tech stack
+## Architecture
+
+```mermaid
+flowchart TD
+    G["Gmail inbox"] -->|"new email"| P["Google Pub/Sub"]
+    P -->|"push"| W["POST /webhooks/gmail"]
+    W --> S["Idempotency check by Gmail message ID"]
+    S --> A["ApplicationsService"]
+    A --> T["PostgreSQL transaction: application, status history, outbox event"]
+    T --> D["Outbox dispatcher: every 10 s, SKIP LOCKED, leases, retries"]
+    D --> Q["BullMQ queue: notifications"]
+    Q --> N["NotificationsProcessor: currently logs"]
+```
+
+Delivery is **at-least-once**, not exactly-once. An outbox event marked `PUBLISHED` means BullMQ accepted the job, not that a user received a notification.
+
+## Tech Stack
 
 | Layer | Technologies |
 |---|---|
@@ -23,10 +43,11 @@ A personal web app to keep track of job applications: where you applied, what st
 | Backend | NestJS 11, TypeScript, class-validator |
 | Database | PostgreSQL 17, Prisma ORM |
 | Queues and cache | Redis, BullMQ |
-| Integrations | Gmail API (googleapis) |
+| Scheduling | @nestjs/schedule |
+| Integrations | Gmail API, Google Pub/Sub |
 | Observability | Pino, Prometheus (`prom-client`) |
 | Testing | Jest |
-| Infrastructure | Docker, Docker Compose |
+| Infrastructure | Docker, Docker Compose, GitHub Actions |
 
 ## Repository layout
 
@@ -45,7 +66,14 @@ Job_Tracker/
 
 Requires Docker with Compose and Node.js (the supported range is in `engines` in `apps/web/package.json`).
 
-### 1. Configure the API
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/VittoLym/Job_Tracker.git
+cd Job_Tracker
+```
+
+### 2. Configure the API
 
 ```bash
 cp apps/api/.env.example apps/api/.env
@@ -54,18 +82,17 @@ cp apps/api/.env.example apps/api/.env
 | Variable | Description |
 |---|---|
 | `PORT` | API port (default `3000`) |
-| `DATABASE_URL`, `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT` | Connections. `docker-compose.yml` sets them for the API container; the values in `.env.example` are for running the API on your machine with `docker-compose.dev.yml` |
+| `DATABASE_URL` | PostgreSQL connection. `docker-compose.yml` sets it for the API container. For running the API on your machine, use port `5433` with `docker-compose.yml` or `5432` with `docker-compose.dev.yml` |
+| `REDIS_HOST`, `REDIS_PORT` | Redis connection, used by BullMQ and the Gmail cursor. `docker-compose.yml` sets them for the API container |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GOOGLE_REFRESH_TOKEN` | Gmail OAuth (optional) |
 | `GMAIL_PUBSUB_TOPIC` | Full Pub/Sub topic name. Leave it empty to skip the Gmail watch |
 | `WEBHOOK_TOKEN` | Shared secret that `POST /webhooks/gmail` requires as `?token=` |
 | `CORS_ORIGIN` | Comma-separated list of allowed browser origins. Empty allows any origin |
 | `DEMO_MODE` | `true` makes the API read-only |
 
-### 2. Start PostgreSQL, Redis and the API
+### 3. Start PostgreSQL, Redis and the API
 
 ```bash
-git clone https://github.com/VittoLym/Job_Tracker.git
-cd Job_Tracker
 docker compose up --build
 ```
 
@@ -77,7 +104,7 @@ docker compose up --build
 
 The database credentials in `docker-compose.yml` are for local development only.
 
-### 3. Apply the database migrations
+### 4. Apply the database migrations
 
 From the repository root, with the containers running:
 
@@ -87,7 +114,7 @@ npm ci
 DATABASE_URL=postgresql://postgres:postgres@localhost:5433/jobtracker npx prisma migrate deploy
 ```
 
-### 4. Start the frontend
+### 5. Start the frontend
 
 ```bash
 cd apps/web
@@ -143,38 +170,52 @@ Request bodies are validated with `whitelist` and `forbidNonWhitelisted`.
 
 ```bash
 cd apps/api
-npm test
+npx jest --runInBand
 ```
 
-The unit tests cover `EmailParserService`: LinkedIn confirmations in Spanish and English, status detection, priority between statuses and company hints. The known false positives (newsletters that mention interviews, sender names with a department such as "Acme Talent") are documented with `it.failing`, so they show up as known gaps instead of being hidden.
+The test suite covers:
 
-The applications service, the webhook and the frontend are not covered yet, and the e2e template needs PostgreSQL and Redis running.
+- **Email parsing:** LinkedIn application confirmations in Spanish and English, status detection, priority between statuses and company hints. Known false positives (for example newsletters that mention interviews, or sender names that include a department such as "Acme Talent") are documented with `it.failing`, so they show up as known gaps instead of being hidden.
+- **Gmail idempotency:** duplicate message handling and database uniqueness.
+- **Transactional Outbox:** event dispatching, expired lease recovery, retry handling and maximum attempts.
+- **Scheduled dispatching:** automatic execution and protection against overlapping runs.
+
+Comprehensive application service, webhook and end-to-end coverage are still planned.
+
+GitHub Actions builds and tests the API and builds the frontend on every push and pull request. ESLint runs in the pipeline but does not block it yet.
 
 ## Known limitations
 
 - **No user authentication.** CORS is open unless `CORS_ORIGIN` is set. `DEMO_MODE` blocks writes but does not hide the data.
-- **The Gmail webhook is protected by a shared token only.** It does not verify the Pub/Sub JWT, it is not idempotent (a repeated notification can create a duplicate application) and it logs the sender, subject and snippet of each email it processes.
-- **`/auth/google/callback` returns the refresh token in the HTTP response.** It is a one-off setup helper, not something to expose.
-- **The Gmail watch is registered only at startup.** Gmail watches expire and there is no renewal job yet.
-- **Email parsing is keyword-based.** Broad keywords can match unrelated emails, and the company is matched by loose name comparison, so false matches and misses are possible.
-- **Applications created or updated from Gmail do not update the Prometheus counters**, because the webhook uses the repository directly.
-- **The notifications worker only logs.** Nothing is sent to the user yet.
+- **The Gmail webhook is protected by a shared token only.** It does not verify the Google Pub/Sub JWT.
+- **`/auth/google/callback` returns the refresh token in the HTTP response.** It is a one-off setup helper, not something to expose publicly.
+- **The Gmail watch is registered only at startup.** Gmail watches expire and there is no automatic renewal job yet.
+- **Email parsing is keyword-based.** Broad keywords can match unrelated emails, and company matching is based on name comparison, so variations in how a company is written can cause misses.
+- **Notifications are not delivered yet.** The BullMQ worker only logs status changes. Outbox `PUBLISHED` means queued in BullMQ, not delivered.
 - **The health check covers PostgreSQL only**, not Redis.
 - **The frontend is not part of `docker-compose.yml`.**
+- **The test suite does not provide end-to-end coverage yet.**
 
 ## Roadmap
 
-- [ ] Tests for the applications service and the webhook, plus e2e tests
-- [ ] CI with GitHub Actions
-- [ ] Match companies with a normalized comparison (for example "Acme Talent" and "Acme")
+- [x] Gmail message idempotency
+- [x] Transactional Outbox for application status changes
+- [x] Scheduled Outbox dispatcher
+- [x] Expired lease recovery and retry handling
+- [x] CI with GitHub Actions
+- [ ] Make ESLint blocking in CI
+- [ ] Add comprehensive application service and webhook tests
+- [ ] Add end-to-end tests
+- [ ] Improve company matching with normalized comparison
 - [ ] Skip bulk email (`List-Unsubscribe`, `Precedence: bulk`) in the parser
-- [ ] Make the webhook idempotent by Gmail message id
 - [ ] Renew the Gmail watch automatically
-- [ ] Verify the Pub/Sub JWT on the webhook
-- [ ] Real week-over-week trends in the dashboard
-- [ ] Reminders for applications without news, using delayed BullMQ jobs
-- [ ] Hosted demo with sample data
-- [ ] Authentication
+- [ ] Verify Google Pub/Sub JWT signatures
+- [ ] Implement actual email or in-app notification delivery
+- [ ] Add a frontend notifications center
+- [ ] Add real week-over-week trends to the dashboard
+- [ ] Add reminders for applications without updates
+- [ ] Deploy a hosted demo with sample data
+- [ ] Add authentication
 - [ ] Add the frontend to Docker Compose
 
 ## How I used AI in this project

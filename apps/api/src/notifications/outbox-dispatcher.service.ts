@@ -3,6 +3,7 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { Prisma, OutboxStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 interface ClaimedOutboxEvent {
   id: string;
@@ -16,6 +17,7 @@ export class OutboxDispatcherService {
   private readonly logger = new Logger(OutboxDispatcherService.name);
   private readonly LOCK_TIMEOUT_SECONDS = 60;
   private readonly MAX_ATTEMPTS = 5;
+  private isScheduledDispatchRunning = false;
   constructor(
     private readonly prisma: PrismaService,
     @InjectQueue('notifications')
@@ -79,6 +81,35 @@ export class OutboxDispatcherService {
     }
 
     return recovered.length;
+  }
+  @Cron(CronExpression.EVERY_10_SECONDS, {
+    name: 'outbox-dispatcher',
+  })
+  async scheduledDispatch(): Promise<void> {
+    if (this.isScheduledDispatchRunning) {
+      return;
+    }
+
+    this.isScheduledDispatchRunning = true;
+
+    try {
+      const dispatched = await this.dispatchPendingEvents();
+
+      if (dispatched > 0) {
+        this.logger.log(
+          `Scheduled dispatch completed: ${dispatched} events processed`,
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : String(error);
+
+      this.logger.error(
+        `Scheduled outbox dispatch failed: ${message}`,
+      );
+    } finally {
+      this.isScheduledDispatchRunning = false;
+    }
   }
   async dispatchPendingEvents(batchSize = 10): Promise<number> {
     const limit = Math.max(1, Math.min(batchSize, 100));
