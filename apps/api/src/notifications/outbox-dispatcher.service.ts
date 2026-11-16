@@ -145,9 +145,21 @@ export class OutboxDispatcherService {
     for (const event of events) {
       try {
         const jobName = this.getJobName(event.eventType);
-
+        if (
+          typeof event.payload !== 'object' ||
+          event.payload === null ||
+          Array.isArray(event.payload)
+        ) {
+          throw new Error(
+            `Invalid payload for outbox event ${event.id}`,
+          );
+        }
+        const jobPayload = {
+          ...event.payload,
+          outboxEventId: event.id,
+        };
         this.logger.log(`Dispatching event: ${event.id}`);
-        await this.queue.add(jobName, event.payload, {
+        await this.queue.add(jobName, jobPayload, {
           jobId: `outbox-${event.id}`,
           attempts: 3,
           backoff: {
@@ -155,8 +167,7 @@ export class OutboxDispatcherService {
             delay: 2000,
           },
         });
-
-        await this.prisma.outboxEvent.updateMany({
+        const updateResult = await this.prisma.outboxEvent.updateMany({
           where: {
             id: event.id,
             status: OutboxStatus.PROCESSING,
@@ -169,9 +180,22 @@ export class OutboxDispatcherService {
           },
         });
 
-        this.logger.log(
-          `Outbox event ${event.id} published to BullMQ`,
+        if (updateResult.count !== 1) {
+          const currentEvent = await this.prisma.outboxEvent.findUnique({
+            where: { id: event.id },
+            select: { status: true, attempts: true },
+          });
+
+        throw new Error(
+          `Could not mark outbox event ${event.id} as PUBLISHED. ` +
+          `Updated rows: ${updateResult.count}. ` +
+          `Current state: ${JSON.stringify(currentEvent)}`,
         );
+      }
+
+      this.logger.log(
+        `Outbox event ${event.id} published to BullMQ`,
+      );
       
       } catch (error) {
         const message =
