@@ -1,15 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
-import { ApplicationStatus } from '@prisma/client';
 
-interface StatusChangePayload {
-  applicationId: string;
-  company: string;
-  role: string;
-  fromStatus: ApplicationStatus | null;
-  toStatus: ApplicationStatus;
-}
+import { Injectable } from '@nestjs/common';
+import { NotificationsRepository } from './notifications.repository';
 
 @Injectable()
-export class NotificationsService {}
+export class NotificationsService {
+  constructor(
+    private readonly repository: NotificationsRepository,
+  ) {}
+
+  findAll() {
+    return this.repository.findAll();
+  }
+}
