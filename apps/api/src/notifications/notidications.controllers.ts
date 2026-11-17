@@ -1,12 +1,9 @@
-
 import { Controller, Get } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 
 @Controller('notifications')
 export class NotificationsController {
-  constructor(
-    private readonly service: NotificationsService,
-  ) {}
+  constructor(private readonly service: NotificationsService) {}
 
   @Get()
   findAll() {

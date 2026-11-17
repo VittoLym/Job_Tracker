@@ -25,10 +25,9 @@ export class OutboxDispatcherService {
   ) {}
 
   private async recoverExpiredEvents(): Promise<number> {
-    const recovered = await this.prisma.$transaction((tx) =>
-      tx.$queryRaw<
-        { id: string; status: OutboxStatus; attempts: number }[]
-      >`
+    const recovered = await this.prisma.$transaction(
+      (tx) =>
+        tx.$queryRaw<{ id: string; status: OutboxStatus; attempts: number }[]>`
         WITH expired AS (
           SELECT "id"
           FROM "OutboxEvent"
@@ -101,12 +100,9 @@ export class OutboxDispatcherService {
         );
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : String(error);
+      const message = error instanceof Error ? error.message : String(error);
 
-      this.logger.error(
-        `Scheduled outbox dispatch failed: ${message}`,
-      );
+      this.logger.error(`Scheduled outbox dispatch failed: ${message}`);
     } finally {
       this.isScheduledDispatchRunning = false;
     }
@@ -115,7 +111,8 @@ export class OutboxDispatcherService {
     const limit = Math.max(1, Math.min(batchSize, 100));
     await this.recoverExpiredEvents();
     // Reclamar eventos de forma atómica.
-    const events = await this.prisma.$transaction((tx) =>
+    const events = await this.prisma.$transaction(
+      (tx) =>
         tx.$queryRaw<ClaimedOutboxEvent[]>`
             WITH candidates AS (
             SELECT "id"
@@ -150,9 +147,7 @@ export class OutboxDispatcherService {
           event.payload === null ||
           Array.isArray(event.payload)
         ) {
-          throw new Error(
-            `Invalid payload for outbox event ${event.id}`,
-          );
+          throw new Error(`Invalid payload for outbox event ${event.id}`);
         }
         const jobPayload = {
           ...event.payload,
@@ -186,20 +181,16 @@ export class OutboxDispatcherService {
             select: { status: true, attempts: true },
           });
 
-        throw new Error(
-          `Could not mark outbox event ${event.id} as PUBLISHED. ` +
-          `Updated rows: ${updateResult.count}. ` +
-          `Current state: ${JSON.stringify(currentEvent)}`,
-        );
-      }
+          throw new Error(
+            `Could not mark outbox event ${event.id} as PUBLISHED. ` +
+              `Updated rows: ${updateResult.count}. ` +
+              `Current state: ${JSON.stringify(currentEvent)}`,
+          );
+        }
 
-      this.logger.log(
-        `Outbox event ${event.id} published to BullMQ`,
-      );
-      
+        this.logger.log(`Outbox event ${event.id} published to BullMQ`);
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error ? error.message : String(error);
 
         const exhausted = event.attempts >= this.MAX_ATTEMPTS;
 
@@ -216,9 +207,7 @@ export class OutboxDispatcherService {
             status: OutboxStatus.PROCESSING,
           },
           data: {
-            status: exhausted
-              ? OutboxStatus.DEAD
-              : OutboxStatus.PENDING,
+            status: exhausted ? OutboxStatus.DEAD : OutboxStatus.PENDING,
             ...(exhausted
               ? {}
               : {

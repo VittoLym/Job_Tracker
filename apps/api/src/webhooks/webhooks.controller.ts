@@ -1,4 +1,3 @@
-
 import {
   Controller,
   Post,
@@ -35,10 +34,7 @@ export class WebhooksController {
   }
 
   @Post('gmail')
-  async handleGmailPush(
-    @Body() body: any,
-    @Query('token') token?: string,
-  ) {
+  async handleGmailPush(@Body() body: any, @Query('token') token?: string) {
     if (!this.isValidToken(token)) {
       throw new UnauthorizedException();
     }
@@ -48,9 +44,7 @@ export class WebhooksController {
       return { ok: true };
     }
     try {
-      const decoded = JSON.parse(
-        Buffer.from(data, 'base64').toString('utf-8'),
-      );
+      const decoded = JSON.parse(Buffer.from(data, 'base64').toString('utf-8'));
       const historyId = decoded.historyId?.toString();
       if (!historyId) {
         this.logger.warn('Notificación sin historyId');
@@ -69,7 +63,7 @@ export class WebhooksController {
           historyId: batch.historyId,
           ...parsed,
         });
-        if(result == undefined) throw new Error
+        if (result == undefined) throw new Error();
         if (result.duplicate) {
           this.logger.debug(`Mensaje ${email.id} ya procesado`);
           continue;

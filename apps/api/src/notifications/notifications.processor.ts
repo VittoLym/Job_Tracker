@@ -1,4 +1,3 @@
-
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
@@ -47,9 +46,7 @@ export class NotificationsProcessor extends WorkerHost {
     } = job.data;
 
     if (!outboxEventId || !applicationId) {
-      throw new Error(
-        `Invalid status-change job payload: ${job.id}`,
-      );
+      throw new Error(`Invalid status-change job payload: ${job.id}`);
     }
 
     try {
@@ -63,7 +60,7 @@ export class NotificationsProcessor extends WorkerHost {
             role,
             fromStatus,
             toStatus,
-          } as Prisma.InputJsonValue,
+          },
         },
       });
 

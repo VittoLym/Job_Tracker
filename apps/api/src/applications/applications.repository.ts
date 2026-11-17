@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import {
   GmailProcessingResult,
@@ -177,36 +176,31 @@ export class ApplicationsRepository {
           },
         );
       } catch (error) {
-          if (this.isUniqueConstraintError(error)) {
-            const existingMessage =
-              await this.prisma.gmailProcessedMessage.findUnique({
-                where: {
-                  gmailMessageId: input.gmailMessageId,
-                },
-                select: {
-                  id: true,
-                },
-              });
+        if (this.isUniqueConstraintError(error)) {
+          const existingMessage =
+            await this.prisma.gmailProcessedMessage.findUnique({
+              where: {
+                gmailMessageId: input.gmailMessageId,
+              },
+              select: {
+                id: true,
+              },
+            });
 
-            if (existingMessage) {
-              return {
-                duplicate: true,
-                result: null,
-                reason: 'Mensaje de Gmail ya procesado',
-              };
-            }
+          if (existingMessage) {
+            return {
+              duplicate: true,
+              result: null,
+              reason: 'Mensaje de Gmail ya procesado',
+            };
           }
+        }
 
-          if (
-            !this.isSerializationConflict(error) ||
-            attempt === maxAttempts
-          ) {
-            throw error;
-          }
+        if (!this.isSerializationConflict(error) || attempt === maxAttempts) {
+          throw error;
+        }
 
-          await new Promise((resolve) =>
-            setTimeout(resolve, 50 * attempt),
-          );
+        await new Promise((resolve) => setTimeout(resolve, 50 * attempt));
       }
     }
     throw new Error('No se pudo procesar el mensaje de Gmail');
@@ -232,8 +226,7 @@ export class ApplicationsRepository {
         });
 
         const statusChanged =
-          dto.status !== undefined &&
-          dto.status !== current.status;
+          dto.status !== undefined && dto.status !== current.status;
 
         const updated = await tx.application.update({
           where: { id },

@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsProcessor } from './notifications.processor';
 import { PrismaService } from '../prisma/prisma.service';
@@ -27,9 +26,7 @@ describe('NotificationsProcessor', () => {
       ],
     }).compile();
 
-    processor = module.get<NotificationsProcessor>(
-      NotificationsProcessor,
-    );
+    processor = module.get<NotificationsProcessor>(NotificationsProcessor);
   });
 
   it('should be defined', () => {
@@ -90,13 +87,10 @@ describe('NotificationsProcessor', () => {
         applicationId: 'application-123',
       })
       .mockRejectedValueOnce(
-        new Prisma.PrismaClientKnownRequestError(
-          'Unique constraint failed',
-          {
-            code: 'P2002',
-            clientVersion: 'test',
-          },
-        ),
+        new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+          code: 'P2002',
+          clientVersion: 'test',
+        }),
       );
 
     await expect(processor.process(job)).resolves.toBeUndefined();

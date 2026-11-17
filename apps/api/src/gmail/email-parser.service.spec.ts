@@ -24,7 +24,8 @@ describe('EmailParserService', () => {
   // ------------------------------------------- new applications (LinkedIn)
   describe('new applications confirmed by LinkedIn', () => {
     const FROM = 'LinkedIn <jobs-noreply@linkedin.com>';
-    const JOB_URL = 'https://www.linkedin.com/comm/jobs/view/123456?trk=abc&x=1';
+    const JOB_URL =
+      'https://www.linkedin.com/comm/jobs/view/123456?trk=abc&x=1';
 
     it('detects a Spanish confirmation with company, role and job url', () => {
       const body = [
@@ -125,16 +126,19 @@ describe('EmailParserService', () => {
     });
 
     // Feature gap: only the Spanish marker line is understood
-    it.failing('extracts the role from an English LinkedIn confirmation', () => {
-      const result = parser.parse(
-        FROM,
-        'Your application was sent to Stripe',
-        '',
-        'Your application was sent to Stripe\nBackend Engineer\nStripe',
-      );
+    it.failing(
+      'extracts the role from an English LinkedIn confirmation',
+      () => {
+        const result = parser.parse(
+          FROM,
+          'Your application was sent to Stripe',
+          '',
+          'Your application was sent to Stripe\nBackend Engineer\nStripe',
+        );
 
-      expect(result.role).toBe('Backend Engineer');
-    });
+        expect(result.role).toBe('Backend Engineer');
+      },
+    );
 
     it.todo(
       'does not treat LinkedIn status updates that contain "solicitud a" as new applications',
@@ -144,14 +148,62 @@ describe('EmailParserService', () => {
   // ------------------------------------------------------ status detection
   describe('status detection', () => {
     it.each([
-      ['an offer (Spanish)', 'Acme <talent@acme.com>', 'Novedades', 'Nos complace ofrecerte el puesto', 'OFFER'],
-      ['an offer (English)', 'Acme <talent@acme.com>', 'Job offer', 'We would like to offer you the position', 'OFFER'],
-      ['a rejection (Spanish)', 'Acme <talent@acme.com>', 'Tu postulación', 'Lamentamos informarte que no continuaremos con tu proceso', 'REJECTED'],
-      ['a rejection (English)', 'Acme <talent@acme.com>', 'Your application', 'Unfortunately we will not be moving forward', 'REJECTED'],
-      ['an interview (Spanish)', 'Acme <talent@acme.com>', 'Invitación a entrevista', 'Nos gustaría conocerte', 'INTERVIEW'],
-      ['an interview (English)', 'Acme <talent@acme.com>', 'Next step', 'We would like to schedule a call', 'INTERVIEW'],
-      ['an assessment (Spanish)', 'Acme <talent@acme.com>', 'Prueba técnica', 'Te enviamos la consigna', 'ASSESSMENT'],
-      ['an assessment (English)', 'Acme <talent@acme.com>', 'Technical test', 'Please complete it this week', 'ASSESSMENT'],
+      [
+        'an offer (Spanish)',
+        'Acme <talent@acme.com>',
+        'Novedades',
+        'Nos complace ofrecerte el puesto',
+        'OFFER',
+      ],
+      [
+        'an offer (English)',
+        'Acme <talent@acme.com>',
+        'Job offer',
+        'We would like to offer you the position',
+        'OFFER',
+      ],
+      [
+        'a rejection (Spanish)',
+        'Acme <talent@acme.com>',
+        'Tu postulación',
+        'Lamentamos informarte que no continuaremos con tu proceso',
+        'REJECTED',
+      ],
+      [
+        'a rejection (English)',
+        'Acme <talent@acme.com>',
+        'Your application',
+        'Unfortunately we will not be moving forward',
+        'REJECTED',
+      ],
+      [
+        'an interview (Spanish)',
+        'Acme <talent@acme.com>',
+        'Invitación a entrevista',
+        'Nos gustaría conocerte',
+        'INTERVIEW',
+      ],
+      [
+        'an interview (English)',
+        'Acme <talent@acme.com>',
+        'Next step',
+        'We would like to schedule a call',
+        'INTERVIEW',
+      ],
+      [
+        'an assessment (Spanish)',
+        'Acme <talent@acme.com>',
+        'Prueba técnica',
+        'Te enviamos la consigna',
+        'ASSESSMENT',
+      ],
+      [
+        'an assessment (English)',
+        'Acme <talent@acme.com>',
+        'Technical test',
+        'Please complete it this week',
+        'ASSESSMENT',
+      ],
     ])('detects %s', (_label, from, subject, snippet, expected) => {
       const result = parser.parse(from, subject, snippet, '');
 
@@ -172,7 +224,12 @@ describe('EmailParserService', () => {
     });
 
     it('is case-insensitive', () => {
-      const result = parser.parse('Acme <talent@acme.com>', 'JOB OFFER', 'WE WOULD LIKE TO OFFER YOU THE POSITION', '');
+      const result = parser.parse(
+        'Acme <talent@acme.com>',
+        'JOB OFFER',
+        'WE WOULD LIKE TO OFFER YOU THE POSITION',
+        '',
+      );
 
       expect(result.detectedStatus).toBe('OFFER');
     });
@@ -200,7 +257,12 @@ describe('EmailParserService', () => {
     });
 
     it('returns no match for an unrelated email', () => {
-      const result = parser.parse('Newsletter <news@example.com>', 'Weekly digest', 'Top stories this week', '');
+      const result = parser.parse(
+        'Newsletter <news@example.com>',
+        'Weekly digest',
+        'Top stories this week',
+        '',
+      );
 
       expect(result).toEqual(NO_MATCH);
     });

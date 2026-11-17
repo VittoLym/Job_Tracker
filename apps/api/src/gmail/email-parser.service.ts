@@ -11,7 +11,12 @@ interface ParsedEmail {
 
 @Injectable()
 export class EmailParserService {
-  parse(from: string, subject: string, snippet: string, body: string): ParsedEmail {
+  parse(
+    from: string,
+    subject: string,
+    snippet: string,
+    body: string,
+  ): ParsedEmail {
     const fromLower = from.toLowerCase();
     const subjectLower = subject.toLowerCase();
     const snippetLower = snippet.toLowerCase();
@@ -23,12 +28,18 @@ export class EmailParserService {
       (subjectLower.includes('se ha enviado tu solicitud') ||
         subjectLower.includes('your application was sent') ||
         subjectLower.includes('solicitud a') ||
-        subjectLower.includes('application to')||
+        subjectLower.includes('application to') ||
         subjectLower.includes('peripecia'))
     ) {
       const company = this.extractCompanyFromSubject(subject);
       const role = this.extractRoleFromSnippet(body);
-      return { detectedStatus: 'APPLIED', companyHint: company, role, shouldCreate: true, urlJob: this.extractJobUrl(body) };
+      return {
+        detectedStatus: 'APPLIED',
+        companyHint: company,
+        role,
+        shouldCreate: true,
+        urlJob: this.extractJobUrl(body),
+      };
     }
 
     // OFFER
@@ -39,7 +50,13 @@ export class EmailParserService {
       full.includes('job offer') ||
       full.includes('we would like to offer')
     ) {
-      return { detectedStatus: 'OFFER', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false, urlJob: null };
+      return {
+        detectedStatus: 'OFFER',
+        companyHint: this.extractCompany(from, subject),
+        role: null,
+        shouldCreate: false,
+        urlJob: null,
+      };
     }
 
     // REJECTED
@@ -53,7 +70,13 @@ export class EmailParserService {
       full.includes('lamentamos') ||
       full.includes('we regret')
     ) {
-      return { detectedStatus: 'REJECTED', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false, urlJob: null };
+      return {
+        detectedStatus: 'REJECTED',
+        companyHint: this.extractCompany(from, subject),
+        role: null,
+        shouldCreate: false,
+        urlJob: null,
+      };
     }
 
     // INTERVIEW
@@ -67,7 +90,13 @@ export class EmailParserService {
       full.includes('next step') ||
       full.includes('siguiente paso')
     ) {
-      return { detectedStatus: 'INTERVIEW', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false, urlJob: null };
+      return {
+        detectedStatus: 'INTERVIEW',
+        companyHint: this.extractCompany(from, subject),
+        role: null,
+        shouldCreate: false,
+        urlJob: null,
+      };
     }
 
     // ASSESSMENT
@@ -78,10 +107,22 @@ export class EmailParserService {
       full.includes('challenge') ||
       full.includes('desafío')
     ) {
-      return { detectedStatus: 'ASSESSMENT', companyHint: this.extractCompany(from, subject), role: null, shouldCreate: false, urlJob: null };
+      return {
+        detectedStatus: 'ASSESSMENT',
+        companyHint: this.extractCompany(from, subject),
+        role: null,
+        shouldCreate: false,
+        urlJob: null,
+      };
     }
 
-    return { detectedStatus: null, companyHint: null, role: null, shouldCreate: false, urlJob: null };
+    return {
+      detectedStatus: null,
+      companyHint: null,
+      role: null,
+      shouldCreate: false,
+      urlJob: null,
+    };
   }
 
   private extractCompanyFromSubject(subject: string): string | null {
@@ -109,19 +150,25 @@ export class EmailParserService {
     }
 
     const fromName = from.match(/^([^<@]+)/)?.[1]?.trim();
-    if (fromName && !['noreply', 'jobs', 'no-reply', 'notifications'].some(w => fromName.toLowerCase().includes(w))) {
+    if (
+      fromName &&
+      !['noreply', 'jobs', 'no-reply', 'notifications'].some((w) =>
+        fromName.toLowerCase().includes(w),
+      )
+    ) {
       return fromName;
     }
 
     return null;
   }
+
   private extractRoleFromSnippet(body: string): string | null {
     const lines = body
       .split(/\r?\n/)
-      .map(x => x.trim())
+      .map((x) => x.trim())
       .filter(Boolean);
 
-    const sentIndex = lines.findIndex(l =>
+    const sentIndex = lines.findIndex((l) =>
       l.includes('Se ha enviado tu solicitud a'),
     );
 
@@ -129,14 +176,9 @@ export class EmailParserService {
       return null;
     }
 
-    const company = lines[sentIndex]
-      .replace('Se ha enviado tu solicitud a', '')
-      .replace('.', '')
-      .trim();
-
-    const role = lines[sentIndex + 1] || null;
-    return role;
+    return lines[sentIndex + 1] || null;
   }
+
   private extractJobUrl(body: string): string | null {
     const match = body.match(
       /https:\/\/www\.linkedin\.com\/comm\/jobs\/view\/[^\s]+/,

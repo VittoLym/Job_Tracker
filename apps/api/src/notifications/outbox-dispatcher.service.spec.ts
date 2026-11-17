@@ -1,4 +1,3 @@
-
 import { randomUUID } from 'crypto';
 import { Queue } from 'bullmq';
 import { OutboxStatus } from '@prisma/client';
@@ -102,12 +101,8 @@ describe('OutboxDispatcherService', () => {
     expect(recoveredEvent.status).toBe(OutboxStatus.PENDING);
     expect(recoveredEvent.attempts).toBe(1);
     expect(recoveredEvent.lockedAt).toBeNull();
-    expect(recoveredEvent.lastError).toBe(
-      'Previous dispatcher lease expired',
-    );
-    expect(recoveredEvent.availableAt.getTime()).toBeGreaterThan(
-      Date.now(),
-    );
+    expect(recoveredEvent.lastError).toBe('Previous dispatcher lease expired');
+    expect(recoveredEvent.availableAt.getTime()).toBeGreaterThan(Date.now());
   });
 
   it('should mark an expired event as DEAD when maximum attempts are reached', async () => {
@@ -209,7 +204,7 @@ describe('OutboxDispatcherService', () => {
       addSpy.mockRestore();
     }
   });
-    it('should dispatch pending events when the scheduled handler runs', async () => {
+  it('should dispatch pending events when the scheduled handler runs', async () => {
     const event = await prisma.outboxEvent.create({
       data: {
         aggregateType: 'Application',

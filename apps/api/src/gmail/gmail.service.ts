@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { Injectable, Logger } from '@nestjs/common';
-import { google } from 'googleapis';
+import { google, gmail_v1 } from 'googleapis';
 import { Redis } from 'ioredis';
 
 type GmailMessage = {
@@ -25,7 +25,7 @@ export class GmailService {
       port: Number(process.env.REDIS_PORT) || 6379,
     });
   }
-  
+
   private getOAuthClient() {
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
@@ -58,19 +58,13 @@ export class GmailService {
     });
     const initialHistoryId = res.data.historyId?.toString();
     if (initialHistoryId) {
-      const existingHistoryId = await this.redis.get(
-        'gmail:lastHistoryId',
-      );
+      const existingHistoryId = await this.redis.get('gmail:lastHistoryId');
 
       if (!existingHistoryId) {
-        await this.redis.set(
-          'gmail:lastHistoryId',
-          initialHistoryId,
-        );
+        await this.redis.set('gmail:lastHistoryId', initialHistoryId);
       }
-      this.logger.log('Gmail Watch activado correctamente')
-    }
-    else{
+      this.logger.log('Gmail Watch activado correctamente');
+    } else {
       this.logger.warn('No hay historyId guardado.');
     }
   }
@@ -78,12 +72,16 @@ export class GmailService {
   async getNewMessages(newHistoryId: string): Promise<GmailSyncBatch> {
     const lastHistoryId = await this.redis.get('gmail:lastHistoryId');
     if (!lastHistoryId) {
-      throw new Error('No existe lastHistoryId. Es necesario inicializar la sincronización.');
+      throw new Error(
+        'No existe lastHistoryId. Es necesario inicializar la sincronización.',
+      );
     }
 
     // Notificación repetida o desordenada: no hay nada nuevo que leer.
     if (BigInt(newHistoryId) <= BigInt(lastHistoryId)) {
-      this.logger.log(`Notificación ${newHistoryId} ya cubierta por ${lastHistoryId}`);
+      this.logger.log(
+        `Notificación ${newHistoryId} ya cubierta por ${lastHistoryId}`,
+      );
       return { messages: [], historyId: lastHistoryId };
     }
 
@@ -111,7 +109,9 @@ export class GmailService {
     } catch (err) {
       if (this.isNotFound(err)) {
         // Gmail ya no conserva ese historial: se retoma desde la notificación actual.
-        this.logger.warn(`El historyId ${lastHistoryId} expiró, se reinicia desde ${newHistoryId}`);
+        this.logger.warn(
+          `El historyId ${lastHistoryId} expiró, se reinicia desde ${newHistoryId}`,
+        );
         return { messages: [], historyId: newHistoryId };
       }
       throw err;
@@ -143,11 +143,29 @@ export class GmailService {
     this.logger.log(`HistoryId confirmado: ${historyId}`);
   }
 
-  private isNotFound(err: any): boolean {
-    return err?.code === 404 || err?.status === 404 || err?.response?.status === 404;
+  private isNotFound(err: unknown): boolean {
+    if (typeof err !== 'object' || err === null) {
+      return false;
+    }
+
+    const error = err as Record<string, unknown>;
+    const response = error['response'];
+
+    const responseStatus =
+      typeof response === 'object' && response !== null
+        ? (response as Record<string, unknown>)['status']
+        : undefined;
+
+    return (
+      error['code'] === 404 ||
+      error['status'] === 404 ||
+      responseStatus === 404
+    );
   }
 
-  async getMessage(messageId: string): Promise<{ from: string; subject: string; body: string, snippet: string }> {
+  async getMessage(
+    messageId: string,
+  ): Promise<{ from: string; subject: string; body: string; snippet: string }> {
     const auth = this.getOAuthClient();
     const gmail = google.gmail({ version: 'v1', auth });
 
@@ -158,8 +176,8 @@ export class GmailService {
     });
 
     const headers = msg.data.payload?.headers ?? [];
-    const from = headers.find(h => h.name === 'From')?.value ?? '';
-    const subject = headers.find(h => h.name === 'Subject')?.value ?? '';
+    const from = headers.find((h) => h.name === 'From')?.value ?? '';
+    const subject = headers.find((h) => h.name === 'Subject')?.value ?? '';
     const snippet = msg.data.snippet ?? '';
 
     // Extraer texto del body
@@ -168,35 +186,44 @@ export class GmailService {
     return { from, subject, body, snippet };
   }
 
-  private extractBody(payload: any): string {
+  private extractBody(
+    payload: gmail_v1.Schema$MessagePart | null | undefined,
+  ): string {
     if (!payload) return '';
-    // Si tiene parts (multipart)
+
+    // Buscar partes multipart.
     if (payload.parts) {
+      // Priorizar text/plain.
       for (const part of payload.parts) {
-        // Buscar text/plain primero
         if (part.mimeType === 'text/plain' && part.body?.data) {
           return Buffer.from(part.body.data, 'base64').toString('utf-8');
         }
-        // Recursivo para partes anidadas
+
+        // Buscar recursivamente en partes anidadas.
         if (part.parts) {
           const nested = this.extractBody(part);
           if (nested) return nested;
         }
       }
-      // Fallback a text/html si no hay plain
+
+      // Fallback a text/html.
       for (const part of payload.parts) {
         if (part.mimeType === 'text/html' && part.body?.data) {
           const html = Buffer.from(part.body.data, 'base64').toString('utf-8');
-          // Strip HTML tags básico
-          return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+          return html
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
         }
       }
     }
 
-    // Si el body está directo en el payload
+    // Body directamente en el payload.
     if (payload.body?.data) {
       return Buffer.from(payload.body.data, 'base64').toString('utf-8');
     }
+
     return '';
   }
 }

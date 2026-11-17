@@ -23,7 +23,15 @@ export class MetricsService {
     this.statusChanges.inc({ from_status: fromStatus, to_status: toStatus });
   }
 
-  observeHttpDuration(method: string, route: string, statusCode: number, duration: number) {
-    this.httpDuration.observe({ method, route, status_code: String(statusCode) }, duration);
+  observeHttpDuration(
+    method: string,
+    route: string,
+    statusCode: number,
+    duration: number,
+  ) {
+    this.httpDuration.observe(
+      { method, route, status_code: String(statusCode) },
+      duration,
+    );
   }
 }
