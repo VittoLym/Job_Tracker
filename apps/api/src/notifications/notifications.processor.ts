@@ -1,11 +1,10 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ApplicationStatus } from '@prisma/client';
+import { ApplicationStatus, Prisma } from '@prisma/client';
 
-interface StatusChangeJobPayload {
+export interface StatusChangeJobPayload {
   outboxEventId: string;
   applicationId: string;
   company: string;
@@ -22,7 +21,7 @@ export class NotificationsProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job): Promise<void> {
+  async process(job: Job<StatusChangeJobPayload>): Promise<void> {
     switch (job.name) {
       case 'status-change':
         await this.handleStatusChange(job);

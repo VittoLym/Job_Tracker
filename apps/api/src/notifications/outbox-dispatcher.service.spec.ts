@@ -70,11 +70,11 @@ describe('OutboxDispatcherService', () => {
     expect(updatedEvent.publishedAt).not.toBeNull();
 
     const job = await queue.getJob(`outbox-${event.id}`);
-
+    const data = job?.data as { applicationId: string; toStatus: string };
     expect(job).not.toBeNull();
     expect(job?.name).toBe('status-change');
-    expect(job?.data.applicationId).toBe(aggregateId);
-    expect(job?.data.toStatus).toBe('INTERVIEW');
+    expect(data.applicationId).toBe(aggregateId);
+    expect(data.toStatus).toBe('INTERVIEW');
   });
 
   it('should recover an expired event with attempts remaining', async () => {

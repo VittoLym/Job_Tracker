@@ -10,8 +10,14 @@ import { timingSafeEqual } from 'crypto';
 import { GmailService } from '../gmail/gmail.service';
 import { EmailParserService } from '../gmail/email-parser.service';
 import { ApplicationsService } from '../applications/applications.service';
-import { ApplicationStatus, WorkMode } from '@prisma/client';
+interface PubSubPushBody {
+  message?: { data?: string };
+}
 
+interface GmailPushNotification {
+  emailAddress?: string;
+  historyId?: string | number;
+}
 @Controller('webhooks')
 export class WebhooksController {
   private readonly logger = new Logger(WebhooksController.name);
@@ -34,7 +40,10 @@ export class WebhooksController {
   }
 
   @Post('gmail')
-  async handleGmailPush(@Body() body: any, @Query('token') token?: string) {
+  async handleGmailPush(
+    @Body() body: PubSubPushBody,
+    @Query('token') token?: string,
+  ) {
     if (!this.isValidToken(token)) {
       throw new UnauthorizedException();
     }
@@ -44,7 +53,9 @@ export class WebhooksController {
       return { ok: true };
     }
     try {
-      const decoded = JSON.parse(Buffer.from(data, 'base64').toString('utf-8'));
+      const decoded = JSON.parse(
+        Buffer.from(data, 'base64').toString('utf-8'),
+      ) as GmailPushNotification;
       const historyId = decoded.historyId?.toString();
       if (!historyId) {
         this.logger.warn('Notificación sin historyId');

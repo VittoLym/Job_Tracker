@@ -157,9 +157,7 @@ export class GmailService {
         : undefined;
 
     return (
-      error['code'] === 404 ||
-      error['status'] === 404 ||
-      responseStatus === 404
+      error['code'] === 404 || error['status'] === 404 || responseStatus === 404
     );
   }
 

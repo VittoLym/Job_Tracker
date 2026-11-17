@@ -1,9 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationsProcessor } from './notifications.processor';
 import { PrismaService } from '../prisma/prisma.service';
-import { ApplicationStatus } from '@prisma/client';
-import { Prisma } from '@prisma/client';
+import { ApplicationStatus, Prisma } from '@prisma/client';
+import { Job } from 'bullmq';
+import {
+  NotificationsProcessor,
+  StatusChangeJobPayload,
+} from './notifications.processor';
 
+const makeJob = (
+  name: string,
+  data: Partial<StatusChangeJobPayload>,
+): Job<StatusChangeJobPayload> =>
+  ({ id: 'job-1', name, data }) as unknown as Job<StatusChangeJobPayload>;
 describe('NotificationsProcessor', () => {
   let processor: NotificationsProcessor;
 
@@ -34,17 +42,14 @@ describe('NotificationsProcessor', () => {
   });
 
   it('should persist a status-change notification', async () => {
-    const job = {
-      name: 'status-change',
-      data: {
-        outboxEventId: 'outbox-123',
-        applicationId: 'application-123',
-        company: 'Acme',
-        role: 'Full Stack Developer',
-        fromStatus: ApplicationStatus.APPLIED,
-        toStatus: ApplicationStatus.INTERVIEW,
-      },
-    } as any;
+    const job = makeJob('status-change', {
+      outboxEventId: 'outbox-123',
+      applicationId: 'application-123',
+      company: 'Acme',
+      role: 'Full Stack Developer',
+      fromStatus: ApplicationStatus.APPLIED,
+      toStatus: ApplicationStatus.INTERVIEW,
+    });
 
     prismaMock.notification.create.mockResolvedValue({
       id: 'outbox-123',
@@ -69,17 +74,14 @@ describe('NotificationsProcessor', () => {
   });
 
   it('should handle duplicate outbox events without creating duplicate notifications', async () => {
-    const job = {
-      name: 'status-change',
-      data: {
-        outboxEventId: 'outbox-123',
-        applicationId: 'application-123',
-        company: 'Acme',
-        role: 'Full Stack Developer',
-        fromStatus: ApplicationStatus.APPLIED,
-        toStatus: ApplicationStatus.INTERVIEW,
-      },
-    } as any;
+    const job = makeJob('status-change', {
+      outboxEventId: 'outbox-123',
+      applicationId: 'application-123',
+      company: 'Acme',
+      role: 'Full Stack Developer',
+      fromStatus: ApplicationStatus.APPLIED,
+      toStatus: ApplicationStatus.INTERVIEW,
+    });
 
     prismaMock.notification.create
       .mockResolvedValueOnce({
@@ -100,24 +102,18 @@ describe('NotificationsProcessor', () => {
   });
 
   it('should not fail when the job is unknown', async () => {
-    const job = {
-      name: 'unknown-job',
-      data: {},
-    } as any;
+    const job = makeJob('unknown-job', {});
 
     await expect(processor.process(job)).resolves.toBeUndefined();
     expect(prismaMock.notification.create).not.toHaveBeenCalled();
   });
   it('should reject status-change jobs with missing required identifiers', async () => {
-    const job = {
-      name: 'status-change',
-      data: {
-        company: 'Acme',
-        role: 'Full Stack Developer',
-        fromStatus: ApplicationStatus.APPLIED,
-        toStatus: ApplicationStatus.INTERVIEW,
-      },
-    } as any;
+    const job = makeJob('status-change', {
+      company: 'Acme',
+      role: 'Full Stack Developer',
+      fromStatus: ApplicationStatus.APPLIED,
+      toStatus: ApplicationStatus.INTERVIEW,
+    });
 
     await expect(processor.process(job)).rejects.toThrow(
       'Invalid status-change job payload',
@@ -126,17 +122,14 @@ describe('NotificationsProcessor', () => {
     expect(prismaMock.notification.create).not.toHaveBeenCalled();
   });
   it('should propagate persistence errors other than duplicate errors', async () => {
-    const job = {
-      name: 'status-change',
-      data: {
-        outboxEventId: 'outbox-456',
-        applicationId: 'application-456',
-        company: 'Acme',
-        role: 'Backend Developer',
-        fromStatus: ApplicationStatus.APPLIED,
-        toStatus: ApplicationStatus.INTERVIEW,
-      },
-    } as any;
+    const job = makeJob('status-change', {
+      outboxEventId: 'outbox-456',
+      applicationId: 'application-456',
+      company: 'Acme',
+      role: 'Backend Developer',
+      fromStatus: ApplicationStatus.APPLIED,
+      toStatus: ApplicationStatus.INTERVIEW,
+    });
 
     const databaseError = new Error('Database connection failed');
 
