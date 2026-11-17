@@ -10,14 +10,23 @@ import {
 const makeJob = (
   name: string,
   data: Partial<StatusChangeJobPayload>,
-): Job<StatusChangeJobPayload> =>
-  ({ id: 'job-1', name, data }) as unknown as Job<StatusChangeJobPayload>;
+): Job<StatusChangeJobPayload, void, string> =>
+  ({
+    id: 'job-1',
+    name,
+    data: data as StatusChangeJobPayload,
+  }) as unknown as Job<StatusChangeJobPayload, void, string>;
 describe('NotificationsProcessor', () => {
   let processor: NotificationsProcessor;
 
+  type NotificationCreate = PrismaService['notification']['create'];
+
   const prismaMock = {
     notification: {
-      create: jest.fn(),
+      create: jest.fn<
+        ReturnType<NotificationCreate>,
+        Parameters<NotificationCreate>
+      >(),
     },
   };
 

@@ -21,7 +21,7 @@ export class NotificationsProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<StatusChangeJobPayload>): Promise<void> {
+  async process(job: Job<StatusChangeJobPayload, void, string>): Promise<void> {
     switch (job.name) {
       case 'status-change':
         await this.handleStatusChange(job);
@@ -33,7 +33,7 @@ export class NotificationsProcessor extends WorkerHost {
   }
 
   private async handleStatusChange(
-    job: Job<StatusChangeJobPayload>,
+    job: Job<StatusChangeJobPayload, void, string>,
   ): Promise<void> {
     const {
       outboxEventId,
