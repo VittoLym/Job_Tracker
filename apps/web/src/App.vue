@@ -1,3 +1,4 @@
+
 <template>
   <div class="app" :class="{ dark: isDark }">
     <aside class="sidebar">
@@ -14,10 +15,12 @@
             <span class="material-symbols-outlined">grid_view</span>
             <span>Dashboard</span>
           </RouterLink>
+
           <RouterLink to="/applications" class="nav-item">
             <span class="material-symbols-outlined">work</span>
             <span>Applications</span>
           </RouterLink>
+          <NotificationBell />
         </nav>
       </div>
 
@@ -26,7 +29,13 @@
           <span class="material-symbols-outlined">settings</span>
           <span>Settings</span>
         </div>
-        <button class="theme-toggle" @click="toggleTheme">
+
+        <button
+          class="theme-toggle"
+          type="button"
+          @click="toggleTheme"
+          :aria-label="isDark ? 'Activar tema claro' : 'Activar tema oscuro'"
+        >
           <span class="material-symbols-outlined">
             {{ isDark ? 'light_mode' : 'dark_mode' }}
           </span>
@@ -35,52 +44,81 @@
     </aside>
 
     <main class="content">
-       <RouterView v-slot="{ Component }">
-          <component
-            :is="Component"
-            :is-dark="isDark"
-          />
-        </RouterView>
+      <RouterView v-slot="{ Component }">
+        <component
+          :is="Component"
+          :is-dark="isDark"
+        />
+      </RouterView>
     </main>
   </div>
 </template>
+
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { RouterLink, RouterView } from 'vue-router';
-const isDark = ref(false)
-function toggleTheme() {
-  isDark.value = !isDark.value;
-  applyTheme(isDark.value);
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
-  defineEmits()
-}
+import { useNotificationsStore } from './stores/notifications.store';
+import NotificationBell from './components/NotificationBell.vue';
+
+const isDark = ref(false);
+const notificationsStore = useNotificationsStore();
+
+let notificationsInterval: number | null = null;
+let mediaQuery: MediaQueryList | null = null;
 
 function applyTheme(dark: boolean) {
-  // ✅ Aplicar al HTML, NO al div del dashboard
   document.documentElement.classList.toggle('dark', dark);
 }
 
-// Watcher por si cambia desde otro lugar
-watch(isDark, (val) => {
-  applyTheme(val);
+function toggleTheme() {
+  isDark.value = !isDark.value;
+
+  localStorage.setItem(
+    'theme',
+    isDark.value ? 'dark' : 'light',
+  );
+}
+
+watch(isDark, (dark) => {
+  applyTheme(dark);
 });
+
+function handleSystemThemeChange(event: MediaQueryListEvent) {
+  if (localStorage.getItem('theme')) return;
+
+  isDark.value = event.matches;
+}
+
 onMounted(() => {
-  const saved = localStorage.getItem('theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  isDark.value = saved ? saved === 'dark' : prefersDark;
-  applyTheme(isDark.value);
-  
-  // Escuchar cambios en el sistema
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  const handler = (e: MediaQueryListEvent) => {
-    if (!localStorage.getItem('theme')) {
-      isDark.value = e.matches;
-      applyTheme(e.matches);
-    }
-  };
-  mediaQuery.addEventListener('change', handler);
-})
+  // Tema
+  const savedTheme = localStorage.getItem('theme');
+
+  mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+  isDark.value = savedTheme
+    ? savedTheme === 'dark'
+    : mediaQuery.matches;
+
+  mediaQuery.addEventListener('change', handleSystemThemeChange);
+
+  // Notificaciones: carga inicial
+  void notificationsStore.fetchAll();
+
+  // Sincronización periódica cada 30 segundos
+  notificationsInterval = window.setInterval(() => {
+    void notificationsStore.fetchAll();
+  }, 30_000);
+});
+
+onUnmounted(() => {
+  mediaQuery?.removeEventListener('change', handleSystemThemeChange);
+
+  if (notificationsInterval !== null) {
+    window.clearInterval(notificationsInterval);
+  }
+});
 </script>
+
 
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -105,7 +143,7 @@ onMounted(() => {
   --sidebar-muted: rgba(255, 255, 255, 0.35);
 }
 
-:global(html.dark) {
+html.dark {
   --bg-app: #0d1117;
   --bg-content: #0d1117;
   --text-primary: #e6edf3;

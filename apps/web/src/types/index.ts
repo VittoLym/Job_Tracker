@@ -41,4 +41,25 @@ export interface CreateApplicationDto {
   notes?: string;
 }
 
+export interface AppNotification {
+  id: string;
+  applicationId: string;
+  type: 'STATUS_CHANGE';
+  payload: {
+    company: string;
+    role: string;
+    fromStatus: ApplicationStatus | null;
+    toStatus: ApplicationStatus;
+  };
+  sentAt: string | null;
+  createdAt: string;
+  application: {
+    id: string;
+    company: string;
+    role: string;
+    status: ApplicationStatus;
+  };
+}
+
+
 export interface UpdateApplicationDto extends Partial<CreateApplicationDto> {}
