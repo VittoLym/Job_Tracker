@@ -53,6 +53,8 @@ jobs:
 
       - run: npm ci
       - run: npx prisma generate
+      - run: npx eslint "{src,test}/**/*.ts"
+        continue-on-error: true
       - run: npx prisma migrate deploy
       - run: npm run build
       - run: npm test
