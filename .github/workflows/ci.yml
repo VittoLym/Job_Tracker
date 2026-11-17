@@ -52,6 +52,8 @@ jobs:
           cache-dependency-path: apps/api/package-lock.json
 
       - run: npm ci
+      - name: Lint API
+        run: npx eslint "{src,test}/**/*.ts"
       - run: npx prisma generate
       - run: npx prisma migrate deploy
       - run: npm run build
