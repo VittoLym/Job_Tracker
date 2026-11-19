@@ -294,97 +294,11 @@
         </div>
       </div>
     </div>
-    <!-- Modal -->
-    <Transition name="modal">
-      <div
-        v-if="modalOpen"
-        class="modal-overlay"
-        @click.self="closeModal"
-      >
-        <div class="modal">
-          <div class="modal-header">
-            <h3>{{ editingId ? 'Edit Application' : 'New Application' }}</h3>
-            <button
-              class="icon-btn"
-              @click="closeModal"
-            >
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <div class="modal-body">
-            <div class="form-grid">
-              <div class="field full">
-                <label>Company Name *</label>
-                <input
-                  v-model="form.company"
-                  placeholder="e.g. Google, Stripe"
-                >
-              </div>
-              <div class="field full">
-                <label>Job Title / Role *</label>
-                <input
-                  v-model="form.role"
-                  placeholder="e.g. Senior Backend Engineer"
-                >
-              </div>
-              <div class="field">
-                <label>Status</label>
-                <select v-model="form.status">
-                  <option
-                    v-for="(config, key) in statusConfig"
-                    :key="key"
-                    :value="key"
-                  >
-                    {{ config.label }}
-                  </option>
-                </select>
-              </div>
-              <div class="field">
-                <label>Work Mode</label>
-                <select v-model="form.workMode">
-                  <option value="">
-                    —
-                  </option>
-                  <option value="REMOTE">
-                    Remote
-                  </option>
-                  <option value="HYBRID">
-                    Hybrid
-                  </option>
-                  <option value="ONSITE">
-                    On-site
-                  </option>
-                </select>
-              </div>
-              <div class="field">
-                <label>Salary (USD)</label>
-                <input
-                  v-model.number="form.salary"
-                  type="number"
-                  placeholder="e.g. 3500"
-                >
-              </div>
-              <div class="field">
-                <label>Job URL</label>
-                <input
-                  v-model="form.url"
-                  placeholder="https://..."
-                >
-              </div>
-              <div class="field full">
-                <label>Notes</label>
-                <textarea
-                  v-model="form.notes"
-                  rows="3"
-                  placeholder="Notes about this application..."
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <ApplicationModal
+      v-model="modalOpen"
+      :application="editingApp"
+      @save="handleSave"
+    />
   </div>
 </template>
 
@@ -394,16 +308,31 @@ import { useRoute } from 'vue-router';
 import type {
   Application,
   ApplicationStatus,
-  WorkMode,
+  ApplicationPayload,
 } from '../types';
 import { useApplicationsStore } from '../stores/applications.store';
+import ApplicationModal from '../components/ApplicationModal.vue';
+import { statusConfig } from '../constants/application-status.ts';
 
+const modalOpen = ref(false);
+const editingApp = ref<Application | null>(null);
+
+function openModal(app?: Application) {
+  editingApp.value = app ?? null;
+  modalOpen.value = true;
+}
+
+async function handleSave(payload: ApplicationPayload, id: string | null) {
+  if (id) {
+    await store.update(id, payload);
+  } else {
+    await store.create(payload);
+  }
+  modalOpen.value = false;
+  emit('newApplication');
+}
 // Si no tienes el store, puedes usar este mock
 
-// Props & Emits
-const props = defineProps<{
-  applications?: Application[];
-}>();
 
 const emit = defineEmits<{
   (e: 'newApplication'): void;
@@ -422,42 +351,7 @@ const store = useApplicationsStore();;
 // State
 const isDark = ref(false);
 const search = ref('');
-const modalOpen = ref(false);
-const editingId = ref<string | null>(null);
 const route = useRoute();
-
-// Status Configuration
-const statusConfig: Record<ApplicationStatus, { label: string; color: string; dotColor?: string }> = {
-  APPLIED:    { label: 'Applied',    color: '#4f46e5', dotColor: '#4f46e5' },
-  ASSESSMENT: { label: 'Assessment', color: '#f59e0b', dotColor: '#f59e0b' },
-  INTERVIEW:  { label: 'Interview',  color: '#3b82f6', dotColor: '#3b82f6' },
-  OFFER:      { label: 'Offer',      color: '#10b981', dotColor: '#10b981' },
-  REJECTED:   { label: 'Rejected',   color: '#ef4444', dotColor: '#ef4444' },
-  GHOSTED:    { label: 'Ghosted',    color: '#6b7280', dotColor: '#6b7280' },
-};
-
-interface ApplicationForm {
-  company: string;
-  role: string;
-  url: string;
-  status: ApplicationStatus;
-  workMode: WorkMode | '';
-  salary: number | undefined;
-  notes: string;
-}
-
-// Form
-const emptyForm = () => ({
-  company: '',
-  role: '',
-  url: '',
-  status: 'APPLIED' as ApplicationStatus,
-  workMode: '' as any,
-  salary: undefined as number | undefined,
-  notes: '',
-});
-
-const form = ref(emptyForm());
 
 // Computed
 const filtered = computed(() => {
@@ -527,50 +421,6 @@ function getFooterStatusClass(app: Application) {
   return '';
 }
 
-function openModal(app?: Application) {
-  if (app) {
-    editingId.value = app.id;
-    form.value = {
-      company: app.company,
-      role: app.role,
-      url: app.url ?? '',
-      status: app.status,
-      workMode: app.workMode ?? '',
-      salary: app.salary ?? undefined,
-      notes: app.notes ?? '',
-    };
-  } else {
-    editingId.value = null;
-    form.value = emptyForm();
-  }
-  modalOpen.value = true;
-}
-
-function closeModal() {
-  modalOpen.value = false;
-  editingId.value = null;
-  form.value = emptyForm();
-}
-
-async function submit() {
-  const dto = {
-    company: form.value.company,
-    role: form.value.role,
-    url: form.value.url || undefined,
-    status: form.value.status,
-    workMode: form.value.workMode || undefined,
-    salary: form.value.salary || undefined,
-    notes: form.value.notes || undefined,
-  };
-
-  if (editingId.value) {
-    await store.update(editingId.value, dto);
-  } else {
-    await store.create(dto);
-  }
-  closeModal();
-  emit('newApplication');
-}
 
 async function confirmDelete(id: string) {
   if (confirm('Delete this application?')) {
@@ -581,10 +431,6 @@ async function confirmDelete(id: string) {
 function toggleTheme() {
   isDark.value = !isDark.value;
   localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
-}
-
-function toggleMenu() {
-  emit('toggleMenu');
 }
 
 function toggleMenuOptions(id: string) {

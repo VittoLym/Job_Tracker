@@ -16,7 +16,7 @@
       <div class="header-actions">
         <button
           class="btn-primary"
-          @click="handleNewApplication"
+          @click="openModal()"
         >
           <span class="material-symbols-outlined">add</span>
           New Application
@@ -154,7 +154,7 @@
         </h3>
         <button
           class="btn-primary"
-          @click="handleNewApplication"
+          @click="openModal()"
         >
           <span class="material-symbols-outlined">add</span>
           New Application
@@ -278,6 +278,10 @@
         View All Applications
       </button>
     </section>
+    <ApplicationModal
+      v-model="modalOpen"
+      @save="handleSave"
+    />
   </div>
 </template>
 
@@ -285,29 +289,26 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useApplicationsStore } from '../stores/applications.store';
 import type { ApplicationStatus } from '../types';
-
-const store = useApplicationsStore();
-
+import { useRouter } from 'vue-router';
+import ApplicationModal from '../components/ApplicationModal.vue';
+import { statusConfig } from '../constants/application-status';
+import type { Application, ApplicationPayload } from '../types';
 // Props & Emits
-interface Application {
-  id: string;
-  company: string;
-  role: string;
-  status: ApplicationStatus;
-  appliedAt: string;
-  updatedAt: string;
-}
+const store = useApplicationsStore();
+const router = useRouter();
 
 const props = defineProps<{
   userName?: string;
-  isDark?: boolean;
+  isDarkP?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'newApplication'): void;
   (e: 'viewApplications'): void;
 }>();
-
+function openModal(app?: Application) {
+  modalOpen.value = true;
+}
 // State
 const isDark = ref(false);
 const userName = ref(props.userName || 'Alex');
@@ -316,43 +317,9 @@ const userName = ref(props.userName || 'Alex');
 // STORE DATA
 // --------------------------------------------------
 
+const modalOpen = ref(false);
 const applications = computed<Application[]>(() => store.applications);
-
 const stats = computed(() => store.stats);
-
-// --------------------------------------------------
-// STATUS CONFIG
-// --------------------------------------------------
-
-const statusConfig: Record<
-  ApplicationStatus,
-  { label: string; color: string }
-> = {
-  APPLIED: {
-    label: 'Applied',
-    color: '#4f46e5',
-  },
-  ASSESSMENT: {
-    label: 'Assessment',
-    color: '#f59e0b',
-  },
-  INTERVIEW: {
-    label: 'Interview',
-    color: '#3b82f6',
-  },
-  OFFER: {
-    label: 'Offer',
-    color: '#10b981',
-  },
-  REJECTED: {
-    label: 'Rejected',
-    color: '#ef4444',
-  },
-  GHOSTED: {
-    label: 'Ghosted',
-    color: '#6b7280',
-  },
-};
 
 // --------------------------------------------------
 // METRICS
@@ -431,19 +398,14 @@ function timeAgo(date: string) {
   return `${days}d ago`;
 }
 
-function toggleTheme() {
-  isDark.value = !isDark.value;
-
-  applyTheme(isDark.value);
-
-  localStorage.setItem(
-    'theme',
-    isDark.value ? 'dark' : 'light',
-  );
-}
-
 function applyTheme(dark: boolean) {
   document.documentElement.classList.toggle('dark', dark);
+}
+
+async function handleSave(payload: ApplicationPayload) {
+  await store.create(payload);
+  await store.fetchAll(); // solo si las stats vienen de la API y no se recalculan solas
+  modalOpen.value = false;
 }
 
 function handleNewApplication() {
@@ -458,7 +420,7 @@ function handleViewApplications() {
 // LIFECYCLE
 // --------------------------------------------------
 watch(
-  () => props.isDark,
+  () => props.isDarkP,
   (newValue) => {
     if (newValue !== undefined) {
       isDark.value = newValue;
@@ -533,7 +495,15 @@ watch(isDark, (value) => {
   transition: all 0.2s ease;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
+.dashboard {
+  /* ...las que ya tenés */
+  --modal-overlay: rgba(0, 0, 0, 0.4);
+}
 
+.dashboard.dark {
+  /* ...las que ya tenés */
+  --modal-overlay: rgba(0, 0, 0, 0.7);
+}
 .dashboard.dark {
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;

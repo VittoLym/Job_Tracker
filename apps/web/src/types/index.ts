@@ -60,6 +60,14 @@ export interface AppNotification {
     status: ApplicationStatus;
   };
 }
-
+export interface ApplicationPayload {
+  company: string;
+  role: string;
+  url?: string;
+  status: ApplicationStatus;
+  workMode?: WorkMode;
+  salary?: number;
+  notes?: string;
+}
 
 export type UpdateApplicationDto = Partial<CreateApplicationDto>;
