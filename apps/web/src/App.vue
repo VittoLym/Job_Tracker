@@ -196,7 +196,7 @@ body {
 /* ===== App Layout ===== */
 .app {
   display: flex;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--bg-app);
   transition: all 0.2s ease;
