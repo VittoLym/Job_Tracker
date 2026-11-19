@@ -144,30 +144,39 @@ function goToNewApplication() {
 
 /* ===== Variables Globales ===== */
 :root {
-  /* Light mode */
+    /* Light mode */
   --bg-app: #fcf8ff;
-  --bg-content: #fcf8ff;
+  --bg-content: #ffffff;
   --text-primary: #1b1b24;
   --text-secondary: #777587;
-  --border-color: #c7c4d8;
+  --border-color: #e4e1ee;
   --shadow-color: rgba(0, 0, 0, 0.05);
-  
-  /* Sidebar (siempre oscuro, pero con variantes) */
-  --sidebar-bg: #0f0e1b;
-  --sidebar-text: rgba(255, 255, 255, 0.5);
-  --sidebar-text-hover: #ffffff;
-  --sidebar-active-bg: #3525cd;
-  --sidebar-active-text: #ffffff;
-  --sidebar-muted: rgba(255, 255, 255, 0.35);
+
+    /* Light mode - Sidebar */
+  --sidebar-bg: #EEEAFB;
+  --sidebar-text: #514B68;
+  --sidebar-text-hover: #3525CD;
+  --sidebar-active-bg: #3525CD;
+  --sidebar-active-text: #FFFFFF;
+  --sidebar-muted: #8C85A3;
+  --sidebar-border: #DDD6F0;
 }
 
 html.dark {
   --bg-app: #0d1117;
-  --bg-content: #0d1117;
+  --bg-content: #161b22;
   --text-primary: #e6edf3;
   --text-secondary: #8b949e;
   --border-color: #30363d;
-  --shadow-color: rgba(0, 0, 0, 0.3);
+  --shadow-color: rgba(0, 0, 0, 0.25);
+
+  /* Sidebar (siempre oscuro, con variantes) */
+  --sidebar-bg: #090812;
+  --sidebar-text: rgba(255, 255, 255, 0.55);
+  --sidebar-text-hover: #ffffff;
+  --sidebar-active-bg: #5145e5;
+  --sidebar-active-text: #ffffff;
+  --sidebar-muted: rgba(255, 255, 255, 0.35);
 }
 
 /* ===== Reset ===== */
@@ -266,18 +275,18 @@ body {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--sidebar-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--sidebar-text);
+  background: var(--text-primary);
+  color: var(--bg-app);
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
 .theme-toggle:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text-hover);
   transform: scale(1.05);
 }
 
@@ -311,7 +320,7 @@ body {
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--sidebar-bg);
   color: var(--sidebar-text-hover);
 }
 
@@ -321,14 +330,6 @@ body {
   box-shadow: 0 2px 12px rgba(53, 37, 205, 0.35);
 }
 
-.nav-item.muted {
-  color: var(--sidebar-muted);
-}
-
-.nav-item.muted:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.6);
-}
 
 /* ===== Main Content ===== */
 .content {

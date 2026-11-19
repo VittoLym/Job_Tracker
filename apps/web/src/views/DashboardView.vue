@@ -1183,7 +1183,7 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .dashboard {
-    padding:16px 0 ;
+    padding:16px 10px ;
     padding-bottom: 80px;
     overflow: auto;
     gap: 16px;
@@ -1192,6 +1192,7 @@ onMounted(() => {
   .metrics-grid {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+    margin: 0;
   }
 
   .metric-card {

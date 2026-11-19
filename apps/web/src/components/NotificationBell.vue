@@ -245,8 +245,7 @@ onUnmounted(() => {
 }
 
 .notification-trigger:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: white;
+  color: var(--sidebar-text-hover);
 }
 .notification-label {
   font-size: 14px;
