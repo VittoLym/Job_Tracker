@@ -56,7 +56,6 @@
       <RouterView v-slot="{ Component }">
         <component
           :is="Component"
-          :is-dark="isDark"
           @new-application="goToNewApplication"
           @view-applications="goToApplications"
         />
@@ -183,7 +182,7 @@ body {
   background: var(--bg-app);
   color: var(--text-primary);
   overflow: hidden;
-  transition: background 0.3s ease, color 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .material-symbols-outlined {
@@ -200,7 +199,7 @@ body {
   height: 100vh;
   overflow: hidden;
   background: var(--bg-app);
-  transition: background 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 /* ===== Sidebar ===== */
@@ -272,7 +271,7 @@ body {
   background: rgba(255, 255, 255, 0.03);
   color: var(--sidebar-text);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   flex-shrink: 0;
 }
 
@@ -303,7 +302,7 @@ body {
   font-weight: 500;
   color: var(--sidebar-text);
   text-decoration: none;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   cursor: pointer;
   border: none;
   background: none;
@@ -338,7 +337,7 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--bg-content);
-  transition: background 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 /* ===== Scrollbar ===== */
@@ -365,21 +364,6 @@ body {
 .dashboard::-webkit-scrollbar-thumb:hover,
 .table-wrap::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
-}
-
-/* ===== Dashboard específico ===== */
-.content>.dashboard {
-  padding: 32px;
-  overflow-y: auto;
-  height: 100%;
-  background: var(--bg-content);
-}
-
-/* ===== Applications específico ===== */
-.content>.applications-page {
-  height: 100%;
-  overflow: hidden;
-  background: var(--bg-content);
 }
 
 /* ===== Responsive ===== */

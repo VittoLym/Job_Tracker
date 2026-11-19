@@ -1,7 +1,22 @@
 <template>
+  <header class="mobile-page-header">
+    <div class="mobile-brand">
+      <div class="mobile-brand-text">
+        <h1>Job Tracker</h1>
+        <span>Applications</span>
+      </div>
+    </div>
+
+    <button
+      class="mobile-add-btn"
+      aria-label="New application"
+      @click="openModal()"
+    >
+      <span class="material-symbols-outlined">add</span>
+    </button>
+  </header>
   <div
     class="dashboard"
-    :class="{ dark: isDark }"
   >
     <!-- Header (Desktop) -->
     <header class="header md-flex">
@@ -23,7 +38,6 @@
         </button>
       </div>
     </header>
-
     <!-- Greeting (Mobile) -->
     <section class="greeting md-hidden">
       <h1 class="greeting-title">
@@ -288,18 +302,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useApplicationsStore } from '../stores/applications.store';
-import type { ApplicationStatus } from '../types';
-import { useRouter } from 'vue-router';
 import ApplicationModal from '../components/ApplicationModal.vue';
 import { statusConfig } from '../constants/application-status';
 import type { Application, ApplicationPayload } from '../types';
 // Props & Emits
 const store = useApplicationsStore();
-const router = useRouter();
 
 const props = defineProps<{
   userName?: string;
-  isDarkP?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -419,56 +429,32 @@ function handleViewApplications() {
 // --------------------------------------------------
 // LIFECYCLE
 // --------------------------------------------------
-watch(
-  () => props.isDarkP,
-  (newValue) => {
-    if (newValue !== undefined) {
-      isDark.value = newValue;
-    }
-  },
-  { immediate: true }
-);
+
 onMounted(() => {
   // Cargar aplicaciones desde la API
   store.fetchAll();
 
   // Theme
+
   const saved = localStorage.getItem('theme');
-
-  const prefersDark = window.matchMedia(
-    '(prefers-color-scheme: dark)',
-  ).matches;
-
-  isDark.value = saved
-    ? saved === 'dark'
-    : prefersDark;
-
-  applyTheme(isDark.value);
-
-  // Escuchar cambios del sistema
-  const mediaQuery = window.matchMedia(
-    '(prefers-color-scheme: dark)',
-  );
-
-  const handler = (event: MediaQueryListEvent) => {
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  isDark.value = saved ? saved === 'dark' : prefersDark;
+  
+  // Media query para dark mode
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  const handler = (e: MediaQueryListEvent) => {
     if (!localStorage.getItem('theme')) {
-      isDark.value = event.matches;
-      applyTheme(event.matches);
+      isDark.value = e.matches;
     }
   };
-
   mediaQuery.addEventListener('change', handler);
 });
 
-// Si cambia el theme desde otro lugar
-watch(isDark, (value) => {
-  applyTheme(value);
-});
 </script>
 
 <style scoped>
 /* Base */
-.dashboard {
+:global(:root){  
   --bg-primary: #fcf8ff;
   --bg-secondary: #f5f2ff;
   --bg-card: #ffffff;
@@ -485,26 +471,22 @@ watch(isDark, (value) => {
   --primary-color: #1e00a9;
   --primary-container: #3525cd;
   --on-primary: #ffffff;
-
+  --modal-overlay: rgba(0, 0, 0, 0.4);
+}
+.dashboard {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  background: var(--bg-primary);
   padding: 24px;
   min-height: 100vh;
   transition: all 0.2s ease;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
-.dashboard {
-  /* ...las que ya tenés */
-  --modal-overlay: rgba(0, 0, 0, 0.4);
-}
-
-.dashboard.dark {
+:global(html.dark) {
   /* ...las que ya tenés */
   --modal-overlay: rgba(0, 0, 0, 0.7);
 }
-.dashboard.dark {
+:global(html.dark) {
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;
   --bg-card: #161b22;
@@ -528,6 +510,9 @@ watch(isDark, (value) => {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
   vertical-align: middle;
   font-size: 20px;
+}
+.mobile-page-header {
+  display: none;
 }
 
 .material-symbols-outlined.filled {
@@ -676,10 +661,10 @@ watch(isDark, (value) => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+  margin-right: 1rem;
 }
 
 .metric-card {
-  background: var(--metric-bg);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 16px;
@@ -769,6 +754,7 @@ watch(isDark, (value) => {
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 24px;
+  transition: all 0.2s ease;
 }
 
 .card-header {
@@ -853,7 +839,7 @@ watch(isDark, (value) => {
   position: relative;
   padding: 0 0 20px 20px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: transform 0.2s ease;
 }
 
 .activity-item:hover {
@@ -921,7 +907,7 @@ watch(isDark, (value) => {
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
@@ -952,7 +938,7 @@ watch(isDark, (value) => {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .btn-outline:hover {
@@ -992,7 +978,7 @@ watch(isDark, (value) => {
 
 .table-row {
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.2s ease;
 }
 
 .table-row:hover {
@@ -1055,7 +1041,7 @@ watch(isDark, (value) => {
   border-radius: 8px;
   padding: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .mobile-app-card:active {
@@ -1116,7 +1102,7 @@ watch(isDark, (value) => {
   height: 100%;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color 0.2s ease;
   gap: 2px;
 }
 
@@ -1167,7 +1153,7 @@ watch(isDark, (value) => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   cursor: pointer;
   z-index: 40;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .fab:hover {
@@ -1197,8 +1183,9 @@ watch(isDark, (value) => {
 
 @media (max-width: 768px) {
   .dashboard {
-    padding: 12px;
+    padding:16px 0 ;
     padding-bottom: 80px;
+    overflow: auto;
     gap: 16px;
   }
 
@@ -1227,4 +1214,76 @@ watch(isDark, (value) => {
     font-size: 24px;
   }
 }
+
+@media (max-width: 768px) {
+  .header{
+    display: none;
+  }
+  .mobile-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+
+  .mobile-brand-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: var(--primary-container);
+    color: white;
+  }
+
+  .mobile-brand-icon .material-symbols-outlined {
+    font-size: 22px;
+  }
+
+  .mobile-brand-text h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+  }
+
+  .mobile-brand-text span {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .mobile-add-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 11px;
+    background: var(--primary-container);
+    color: white;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+
+  .mobile-add-btn:active {
+    transform: scale(0.94);
+  }
+}
+
 </style>

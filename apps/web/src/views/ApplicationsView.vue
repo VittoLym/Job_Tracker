@@ -1,7 +1,6 @@
 <template>
   <div
     class="applications-page"
-    :class="{ dark: isDark }"
   >
     <!-- Header -->
     <header class="page-header">
@@ -15,15 +14,6 @@
       </div>
       <div class="header-actions">
         <button
-          class="theme-toggle"
-          title="Toggle theme"
-          @click="toggleTheme"
-        >
-          <span class="material-symbols-outlined">
-            {{ isDark ? 'dark_mode' : 'light_mode' }}
-          </span>
-        </button>
-        <button
           class="btn-primary"
           @click="openModal()"
         >
@@ -31,6 +21,22 @@
           New Application
         </button>
       </div>
+    </header>
+    <header class="mobile-page-header">
+      <div class="mobile-brand">
+        <div class="mobile-brand-text">
+          <h1>Job Tracker</h1>
+          <span>Applications</span>
+        </div>
+      </div>
+
+      <button
+        class="mobile-add-btn"
+        aria-label="New application"
+        @click="openModal()"
+      >
+        <span class="material-symbols-outlined">add</span>
+      </button>
     </header>
     <!-- Filters Bar -->
     <div class="filters-bar">
@@ -322,18 +328,6 @@ function openModal(app?: Application) {
   modalOpen.value = true;
 }
 
-async function handleSave(payload: ApplicationPayload, id: string | null) {
-  if (id) {
-    await store.update(id, payload);
-  } else {
-    await store.create(payload);
-  }
-  modalOpen.value = false;
-  emit('newApplication');
-}
-// Si no tienes el store, puedes usar este mock
-
-
 const emit = defineEmits<{
   (e: 'newApplication'): void;
   (e: 'viewApplication', id: string): void;
@@ -344,8 +338,6 @@ const emit = defineEmits<{
 
 // Store
 // const store = useApplicationsStore();
-
-// Mock store para demostración
 const store = useApplicationsStore();;
 
 // State
@@ -381,11 +373,18 @@ function formatDate(date: string) {
     day: 'numeric' 
   });
 }
-
+async function handleSave(payload: ApplicationPayload, id: string | null) {
+  if (id) {
+    await store.update(id, payload);
+  } else {
+    await store.create(payload);
+  }
+  modalOpen.value = false;
+  emit('newApplication');
+}
 function toggleFilter(status: ApplicationStatus) {
   store.statusFilter = store.statusFilter === status ? null : status;
 }
-
 function getStatusClass(status: string) {
   const classes = {
     'APPLIED': 'tag-applied',
@@ -397,7 +396,6 @@ function getStatusClass(status: string) {
   };
   return classes[status as keyof typeof classes] || 'tag-default';
 }
-
 function getFooterIcon(app: Application) {
   if (app.status === 'OFFER') return 'check_circle';
   if (app.status === 'ASSESSMENT') return 'assignment';
@@ -405,7 +403,6 @@ function getFooterIcon(app: Application) {
   if (app.status === 'APPLIED') return 'hourglass_empty';
   return 'event';
 }
-
 function getFooterText(app: Application) {
   if (app.status === 'OFFER') return 'Offer Received';
   if (app.status === 'ASSESSMENT') return 'Assessment Pending';
@@ -413,26 +410,17 @@ function getFooterText(app: Application) {
   if (app.status === 'APPLIED') return 'Awaiting Review';
   return '';
 }
-
 function getFooterStatusClass(app: Application) {
   if (app.status === 'OFFER') return 'footer-success';
   if (app.status === 'ASSESSMENT') return 'footer-warning';
   if (app.status === 'INTERVIEW') return 'footer-info';
   return '';
 }
-
-
 async function confirmDelete(id: string) {
   if (confirm('Delete this application?')) {
     await store.remove(id);
   }
 }
-
-function toggleTheme() {
-  isDark.value = !isDark.value;
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light');
-}
-
 function toggleMenuOptions(id: string) {
   // Implement menu options
   console.log('Menu options for:', id);
@@ -538,6 +526,79 @@ watch(
   min-height: 100vh;
   background: var(--bg-page);
   transition: background 0.2s ease;
+}
+
+/* ===== Mobile Page Header ===== */
+.mobile-page-header {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+
+  .mobile-brand-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: var(--primary-container);
+    color: white;
+  }
+
+  .mobile-brand-icon .material-symbols-outlined {
+    font-size: 22px;
+  }
+
+  .mobile-brand-text h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+  }
+
+  .mobile-brand-text span {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .mobile-add-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 11px;
+    background: var(--primary-container);
+    color: white;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+  }
+
+  .mobile-add-btn:active {
+    transform: scale(0.94);
+  }
 }
 
 /* ===== Utility ===== */
