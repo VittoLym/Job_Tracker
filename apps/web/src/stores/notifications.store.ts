@@ -17,7 +17,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
 
     try {
       notifications.value = await notificationsApi.getAll();
-    } catch (e) {
+    } catch {
       error.value = 'Error al cargar las notificaciones';
     } finally {
       loading.value = false;

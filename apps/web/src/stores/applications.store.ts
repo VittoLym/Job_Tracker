@@ -1,7 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { applicationsApi } from '../api/applications';
-import type { Application, CreateApplicationDto, UpdateApplicationDto, ApplicationStatus } from '../types';
+import type {
+  Application,
+  CreateApplicationDto,
+  UpdateApplicationDto,
+  ApplicationStatus,
+} from '../types';
 
 export const useApplicationsStore = defineStore('applications', () => {
   const applications = ref<Application[]>([]);
@@ -11,18 +16,28 @@ export const useApplicationsStore = defineStore('applications', () => {
 
   const filtered = computed(() => {
     if (!statusFilter.value) return applications.value;
-    return applications.value.filter(a => a.status === statusFilter.value);
+
+    return applications.value.filter(
+      (application) => application.status === statusFilter.value,
+    );
   });
 
   const stats = computed(() => {
     const total = applications.value.length;
-    const byStatus = applications.value.reduce((acc, app) => {
-      acc[app.status] = (acc[app.status] ?? 0) + 1;
-      return acc;
-    }, {} as Record<ApplicationStatus, number>);
 
-    const responded = total - (byStatus.APPLIED ?? 0) - (byStatus.GHOSTED ?? 0);
-    const responseRate = total > 0 ? Math.round((responded / total) * 100) : 0;
+    const byStatus = applications.value.reduce(
+      (acc, application) => {
+        acc[application.status] = (acc[application.status] ?? 0) + 1;
+        return acc;
+      },
+      {} as Record<ApplicationStatus, number>,
+    );
+
+    const responded =
+      total - (byStatus.APPLIED ?? 0) - (byStatus.GHOSTED ?? 0);
+
+    const responseRate =
+      total > 0 ? Math.round((responded / total) * 100) : 0;
 
     return { total, byStatus, responseRate };
   });
@@ -30,9 +45,10 @@ export const useApplicationsStore = defineStore('applications', () => {
   async function fetchAll() {
     loading.value = true;
     error.value = null;
+
     try {
       applications.value = await applicationsApi.getAll();
-    } catch (e) {
+    } catch {
       error.value = 'Error al cargar las postulaciones';
     } finally {
       loading.value = false;
@@ -40,21 +56,32 @@ export const useApplicationsStore = defineStore('applications', () => {
   }
 
   async function create(dto: CreateApplicationDto) {
-    const app = await applicationsApi.create(dto);
-    applications.value.unshift(app);
-    return app;
+    const application = await applicationsApi.create(dto);
+    applications.value.unshift(application);
+
+    return application;
   }
 
   async function update(id: string, dto: UpdateApplicationDto) {
     const updated = await applicationsApi.update(id, dto);
-    const idx = applications.value.findIndex(a => a.id === id);
-    if (idx !== -1) applications.value[idx] = updated;
+
+    const index = applications.value.findIndex(
+      (application) => application.id === id,
+    );
+
+    if (index !== -1) {
+      applications.value[index] = updated;
+    }
+
     return updated;
   }
 
   async function remove(id: string) {
     await applicationsApi.remove(id);
-    applications.value = applications.value.filter(a => a.id !== id);
+
+    applications.value = applications.value.filter(
+      (application) => application.id !== id,
+    );
   }
 
   return {

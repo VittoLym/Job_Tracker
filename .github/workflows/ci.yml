@@ -78,4 +78,6 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
 
       - run: npm ci
+      - name: Lint Web
+        run: npm run lint
       - run: npm run build

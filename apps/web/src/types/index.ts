@@ -62,4 +62,4 @@ export interface AppNotification {
 }
 
 
-export interface UpdateApplicationDto extends Partial<CreateApplicationDto> {}
+export type UpdateApplicationDto = Partial<CreateApplicationDto>;

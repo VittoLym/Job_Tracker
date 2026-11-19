@@ -1,18 +1,32 @@
 <template>
-  <div class="applications-page" :class="{ dark: isDark }">
+  <div
+    class="applications-page"
+    :class="{ dark: isDark }"
+  >
     <!-- Header -->
     <header class="page-header">
       <div>
-        <h2 class="title">Applications</h2>
-        <p class="subtitle">Manage and track your job search progress</p>
+        <h2 class="title">
+          Applications
+        </h2>
+        <p class="subtitle">
+          Manage and track your job search progress
+        </p>
       </div>
       <div class="header-actions">
-        <button class="theme-toggle" @click="toggleTheme" title="Toggle theme">
+        <button
+          class="theme-toggle"
+          title="Toggle theme"
+          @click="toggleTheme"
+        >
           <span class="material-symbols-outlined">
             {{ isDark ? 'dark_mode' : 'light_mode' }}
           </span>
         </button>
-        <button class="btn-primary" @click="openModal()">
+        <button
+          class="btn-primary"
+          @click="openModal()"
+        >
           <span class="material-symbols-outlined">add</span>
           New Application
         </button>
@@ -38,7 +52,11 @@
           }"
           @click="toggleFilter(key as ApplicationStatus)"
         >
-          <span v-if="config.dotColor" class="filter-dot" :style="{ background: config.dotColor }"></span>
+          <span
+            v-if="config.dotColor"
+            class="filter-dot"
+            :style="{ background: config.dotColor }"
+          />
           {{ config.label }}
         </button>
       </div>
@@ -50,18 +68,29 @@
             class="search-input"
             placeholder="Search companies..."
             type="text"
-          />
+          >
         </div>
       </div>
     </div>
 
     <!-- Desktop Table View -->
     <div class="table-wrap desktop-only">
-      <div v-if="store.loading" class="empty">Loading...</div>
-      <div v-else-if="filtered.length === 0" class="empty">
+      <div
+        v-if="store.loading"
+        class="empty"
+      >
+        Loading...
+      </div>
+      <div
+        v-else-if="filtered.length === 0"
+        class="empty"
+      >
         No applications found. Add one!
       </div>
-      <table v-else class="table">
+      <table
+        v-else
+        class="table"
+      >
         <thead>
           <tr>
             <th>Company</th>
@@ -70,7 +99,9 @@
             <th>Work Mode</th>
             <th>Salary</th>
             <th>Applied</th>
-            <th class="text-right">Actions</th>
+            <th class="text-right">
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -81,11 +112,15 @@
           >
             <td>
               <div class="company-cell">
-                <div class="company-avatar">{{ app.company[0] }}</div>
+                <div class="company-avatar">
+                  {{ app.company[0] }}
+                </div>
                 <span class="company-name">{{ app.company }}</span>
               </div>
             </td>
-            <td class="role-cell">{{ app.role }}</td>
+            <td class="role-cell">
+              {{ app.role }}
+            </td>
             <td>
               <span
                 class="status-badge"
@@ -94,23 +129,42 @@
                   color: statusConfig[app.status]?.color,
                 }"
               >
-                <span class="badge-dot" :style="{ background: statusConfig[app.status]?.color }"></span>
+                <span
+                  class="badge-dot"
+                  :style="{ background: statusConfig[app.status]?.color }"
+                />
                 {{ statusConfig[app.status]?.label }}
               </span>
             </td>
             <td>
-              <span v-if="app.workMode" class="work-mode-badge">{{ app.workMode }}</span>
-              <span v-else class="text-muted">—</span>
+              <span
+                v-if="app.workMode"
+                class="work-mode-badge"
+              >{{ app.workMode }}</span>
+              <span
+                v-else
+                class="text-muted"
+              >—</span>
             </td>
             <td class="salary-cell">
               {{ app.salary ? '$' + app.salary.toLocaleString() : '—' }}
             </td>
-            <td class="date-cell">{{ formatDate(app.appliedAt) }}</td>
+            <td class="date-cell">
+              {{ formatDate(app.appliedAt) }}
+            </td>
             <td class="actions-cell">
-              <button class="icon-btn" @click="openModal(app)" title="Edit">
+              <button
+                class="icon-btn"
+                title="Edit"
+                @click="openModal(app)"
+              >
                 <span class="material-symbols-outlined">edit</span>
               </button>
-              <button class="icon-btn danger" @click="confirmDelete(app.id)" title="Delete">
+              <button
+                class="icon-btn danger"
+                title="Delete"
+                @click="confirmDelete(app.id)"
+              >
                 <span class="material-symbols-outlined">delete</span>
               </button>
             </td>
@@ -130,7 +184,7 @@
             class="search-input-mobile"
             placeholder="Search applications..."
             type="text"
-          />
+          >
         </div>
       </div>
 
@@ -154,7 +208,11 @@
             }"
             @click="toggleFilter(key as ApplicationStatus)"
           >
-            <span v-if="config.dotColor" class="filter-dot" :style="{ background: config.dotColor }"></span>
+            <span
+              v-if="config.dotColor"
+              class="filter-dot"
+              :style="{ background: config.dotColor }"
+            />
             {{ config.label }}
           </button>
         </div>
@@ -162,13 +220,21 @@
 
       <!-- Cards -->
       <div class="cards-container">
-        <div v-if="store.loading" class="empty">Loading...</div>
-        <div v-else-if="filtered.length === 0" class="empty">
+        <div
+          v-if="store.loading"
+          class="empty"
+        >
+          Loading...
+        </div>
+        <div
+          v-else-if="filtered.length === 0"
+          class="empty"
+        >
           No applications found.
         </div>
         <div
-          v-else
           v-for="app in filtered"
+          v-else
           :key="app.id"
           class="app-card"
           @click="openModal(app)"
@@ -179,11 +245,18 @@
                 {{ app.company[0] }}
               </div>
               <div>
-                <h3 class="app-card-title">{{ app.role }}</h3>
-                <p class="app-card-subtitle">{{ app.company }}</p>
+                <h3 class="app-card-title">
+                  {{ app.role }}
+                </h3>
+                <p class="app-card-subtitle">
+                  {{ app.company }}
+                </p>
               </div>
             </div>
-            <button class="app-card-menu" @click.stop="toggleMenuOptions(app.id)">
+            <button
+              class="app-card-menu"
+              @click.stop="toggleMenuOptions(app.id)"
+            >
               <span class="material-symbols-outlined">more_vert</span>
             </button>
           </div>
@@ -195,8 +268,14 @@
             >
               {{ statusConfig[app.status]?.label }}
             </span>
-            <span v-if="app.workMode" class="tag tag-secondary">{{ app.workMode }}</span>
-            <span v-if="app.salary" class="tag tag-secondary">${{ app.salary.toLocaleString() }}</span>
+            <span
+              v-if="app.workMode"
+              class="tag tag-secondary"
+            >{{ app.workMode }}</span>
+            <span
+              v-if="app.salary"
+              class="tag tag-secondary"
+            >${{ app.salary.toLocaleString() }}</span>
           </div>
 
           <div class="app-card-footer">
@@ -204,7 +283,10 @@
               <span class="material-symbols-outlined footer-icon">event</span>
               <span>Applied: {{ formatDate(app.appliedAt) }}</span>
             </div>
-            <div class="footer-item" :class="getFooterStatusClass(app)">
+            <div
+              class="footer-item"
+              :class="getFooterStatusClass(app)"
+            >
               <span class="material-symbols-outlined footer-icon">{{ getFooterIcon(app) }}</span>
               <span>{{ getFooterText(app) }}</span>
             </div>
@@ -214,11 +296,18 @@
     </div>
     <!-- Modal -->
     <Transition name="modal">
-      <div v-if="modalOpen" class="modal-overlay" @click.self="closeModal">
+      <div
+        v-if="modalOpen"
+        class="modal-overlay"
+        @click.self="closeModal"
+      >
         <div class="modal">
           <div class="modal-header">
             <h3>{{ editingId ? 'Edit Application' : 'New Application' }}</h3>
-            <button class="icon-btn" @click="closeModal">
+            <button
+              class="icon-btn"
+              @click="closeModal"
+            >
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
@@ -227,16 +316,26 @@
             <div class="form-grid">
               <div class="field full">
                 <label>Company Name *</label>
-                <input v-model="form.company" placeholder="e.g. Google, Stripe" />
+                <input
+                  v-model="form.company"
+                  placeholder="e.g. Google, Stripe"
+                >
               </div>
               <div class="field full">
                 <label>Job Title / Role *</label>
-                <input v-model="form.role" placeholder="e.g. Senior Backend Engineer" />
+                <input
+                  v-model="form.role"
+                  placeholder="e.g. Senior Backend Engineer"
+                >
               </div>
               <div class="field">
                 <label>Status</label>
                 <select v-model="form.status">
-                  <option v-for="(config, key) in statusConfig" :key="key" :value="key">
+                  <option
+                    v-for="(config, key) in statusConfig"
+                    :key="key"
+                    :value="key"
+                  >
                     {{ config.label }}
                   </option>
                 </select>
@@ -244,27 +343,45 @@
               <div class="field">
                 <label>Work Mode</label>
                 <select v-model="form.workMode">
-                  <option value="">—</option>
-                  <option value="REMOTE">Remote</option>
-                  <option value="HYBRID">Hybrid</option>
-                  <option value="ONSITE">On-site</option>
+                  <option value="">
+                    —
+                  </option>
+                  <option value="REMOTE">
+                    Remote
+                  </option>
+                  <option value="HYBRID">
+                    Hybrid
+                  </option>
+                  <option value="ONSITE">
+                    On-site
+                  </option>
                 </select>
               </div>
               <div class="field">
                 <label>Salary (USD)</label>
-                <input v-model.number="form.salary" type="number" placeholder="e.g. 3500" />
+                <input
+                  v-model.number="form.salary"
+                  type="number"
+                  placeholder="e.g. 3500"
+                >
               </div>
               <div class="field">
                 <label>Job URL</label>
-                <input v-model="form.url" placeholder="https://..." />
+                <input
+                  v-model="form.url"
+                  placeholder="https://..."
+                >
               </div>
               <div class="field full">
                 <label>Notes</label>
-                <textarea v-model="form.notes" rows="3" placeholder="Notes about this application..." />
+                <textarea
+                  v-model="form.notes"
+                  rows="3"
+                  placeholder="Notes about this application..."
+                />
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </Transition>
@@ -274,7 +391,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import type { Application, ApplicationStatus } from '../types';
+import type {
+  Application,
+  ApplicationStatus,
+  WorkMode,
+} from '../types';
 import { useApplicationsStore } from '../stores/applications.store';
 
 // Si no tienes el store, puedes usar este mock
@@ -303,7 +424,6 @@ const isDark = ref(false);
 const search = ref('');
 const modalOpen = ref(false);
 const editingId = ref<string | null>(null);
-const activeTab = ref('applications');
 const route = useRoute();
 
 // Status Configuration
@@ -316,13 +436,15 @@ const statusConfig: Record<ApplicationStatus, { label: string; color: string; do
   GHOSTED:    { label: 'Ghosted',    color: '#6b7280', dotColor: '#6b7280' },
 };
 
-// Tabs
-const tabs = [
-  { key: 'dashboard', icon: 'dashboard', label: 'Dashboard' },
-  { key: 'applications', icon: 'work', label: 'Applications' },
-  { key: 'companies', icon: 'business', label: 'Companies' },
-  { key: 'insights', icon: 'insights', label: 'Insights' },
-];
+interface ApplicationForm {
+  company: string;
+  role: string;
+  url: string;
+  status: ApplicationStatus;
+  workMode: WorkMode | '';
+  salary: number | undefined;
+  notes: string;
+}
 
 // Form
 const emptyForm = () => ({
@@ -468,15 +590,6 @@ function toggleMenu() {
 function toggleMenuOptions(id: string) {
   // Implement menu options
   console.log('Menu options for:', id);
-}
-
-function handleNotifications() {
-  emit('notifications');
-}
-
-function navigateTo(tab: string) {
-  activeTab.value = tab;
-  emit('navigate', tab);
 }
 
 // Lifecycle

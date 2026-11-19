@@ -1,6 +1,9 @@
 
 <template>
-  <div class="app" :class="{ dark: isDark }">
+  <div
+    class="app"
+    :class="{ dark: isDark }"
+  >
     <aside class="sidebar">
       <div class="sidebar-top">
         <div class="logo">
@@ -11,12 +14,18 @@
         </div>
 
         <nav class="nav">
-          <RouterLink to="/dashboard" class="nav-item">
+          <RouterLink
+            to="/dashboard"
+            class="nav-item"
+          >
             <span class="material-symbols-outlined">grid_view</span>
             <span>Dashboard</span>
           </RouterLink>
 
-          <RouterLink to="/applications" class="nav-item">
+          <RouterLink
+            to="/applications"
+            class="nav-item"
+          >
             <span class="material-symbols-outlined">work</span>
             <span>Applications</span>
           </RouterLink>
@@ -33,8 +42,8 @@
         <button
           class="theme-toggle"
           type="button"
-          @click="toggleTheme"
           :aria-label="isDark ? 'Activar tema claro' : 'Activar tema oscuro'"
+          @click="toggleTheme"
         >
           <span class="material-symbols-outlined">
             {{ isDark ? 'light_mode' : 'dark_mode' }}
@@ -48,6 +57,8 @@
         <component
           :is="Component"
           :is-dark="isDark"
+          @new-application="goToNewApplication"
+          @view-applications="goToApplications"
         />
       </RouterView>
     </main>
@@ -56,11 +67,12 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue';
-import { RouterLink, RouterView } from 'vue-router';
+import { RouterLink, RouterView, useRouter } from 'vue-router';
 import { useNotificationsStore } from './stores/notifications.store';
 import NotificationBell from './components/NotificationBell.vue';
 
 const isDark = ref(false);
+const router = useRouter();
 const notificationsStore = useNotificationsStore();
 
 let notificationsInterval: number | null = null;
@@ -117,6 +129,13 @@ onUnmounted(() => {
     window.clearInterval(notificationsInterval);
   }
 });
+function goToApplications() {
+  void router.push({ name: 'applications' });
+}
+
+function goToNewApplication() {
+  void router.push({ name: 'applications', query: { new: '1' } });
+}
 </script>
 
 

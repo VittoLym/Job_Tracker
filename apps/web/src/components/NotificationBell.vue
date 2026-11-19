@@ -1,6 +1,9 @@
 
 <template>
-  <div ref="container" class="notification-container">
+  <div
+    ref="container"
+    class="notification-container"
+  >
     <button
       class="notification-trigger"
       type="button"
@@ -48,20 +51,32 @@
         </header>
 
         <div class="notification-list">
-          <div v-if="store.loading && !store.notifications.length" class="panel-state">
+          <div
+            v-if="store.loading && !store.notifications.length"
+            class="panel-state"
+          >
             <span class="material-symbols-outlined spinning">progress_activity</span>
             <p>Cargando notificaciones...</p>
           </div>
 
-          <div v-else-if="store.error" class="panel-state error">
+          <div
+            v-else-if="store.error"
+            class="panel-state error"
+          >
             <span class="material-symbols-outlined">error</span>
             <p>{{ store.error }}</p>
-            <button type="button" @click="store.fetchAll()">
+            <button
+              type="button"
+              @click="store.fetchAll()"
+            >
               Reintentar
             </button>
           </div>
 
-          <div v-else-if="!store.notifications.length" class="panel-state">
+          <div
+            v-else-if="!store.notifications.length"
+            class="panel-state"
+          >
             <span class="material-symbols-outlined empty-icon">
               notifications_off
             </span>
@@ -118,7 +133,10 @@
           </article>
         </div>
 
-        <footer v-if="store.notifications.length" class="panel-footer">
+        <footer
+          v-if="store.notifications.length"
+          class="panel-footer"
+        >
           <span>Mostrando {{ store.count }} notificaciones</span>
         </footer>
       </section>

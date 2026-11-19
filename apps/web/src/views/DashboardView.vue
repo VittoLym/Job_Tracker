@@ -1,13 +1,23 @@
 <template>
-  <div class="dashboard" :class="{ dark: isDark }">
+  <div
+    class="dashboard"
+    :class="{ dark: isDark }"
+  >
     <!-- Header (Desktop) -->
     <header class="header md-flex">
       <div>
-        <h2 class="title">Dashboard</h2>
-        <p class="subtitle">Welcome back, {{ userName }}. Here's your application overview.</p>
+        <h2 class="title">
+          Dashboard
+        </h2>
+        <p class="subtitle">
+          Welcome back, {{ userName }}. Here's your application overview.
+        </p>
       </div>
       <div class="header-actions">
-        <button class="btn-primary" @click="handleNewApplication">
+        <button
+          class="btn-primary"
+          @click="handleNewApplication"
+        >
           <span class="material-symbols-outlined">add</span>
           New Application
         </button>
@@ -16,8 +26,12 @@
 
     <!-- Greeting (Mobile) -->
     <section class="greeting md-hidden">
-      <h1 class="greeting-title">Hello, {{ userName }}</h1>
-      <p class="greeting-subtitle">Your career portfolio is looking strong.</p>
+      <h1 class="greeting-title">
+        Hello, {{ userName }}
+      </h1>
+      <p class="greeting-subtitle">
+        Your career portfolio is looking strong.
+      </p>
     </section>
 
     <!-- Metrics Grid -->
@@ -33,7 +47,6 @@
         </div>
         <div class="metric-value-row">
           <span class="metric-value">{{ metric.value }}</span>
-
         </div>
       </div>
     </section>
@@ -43,7 +56,9 @@
       <!-- Applications by Status -->
       <div class="card col-span-2">
         <div class="card-header">
-          <h3 class="card-title">Applications by Status</h3>
+          <h3 class="card-title">
+            Applications by Status
+          </h3>
         </div>
         <div class="status-bars">
           <div 
@@ -76,23 +91,35 @@
       <!-- Recent Activity -->
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">Recent Activity</h3>
+          <h3 class="card-title">
+            Recent Activity
+          </h3>
         </div>
         <div class="activity-list">
-          <div v-if="recentApplications.length === 0" class="empty">
+          <div
+            v-if="recentApplications.length === 0"
+            class="empty"
+          >
             No applications yet. Add one!
           </div>
-          <div v-else class="activity-timeline">
+          <div
+            v-else
+            class="activity-timeline"
+          >
             <div
               v-for="app in recentApplications"
               :key="app.id"
               class="activity-item"
               @click="handleViewApplications"
             >
-              <div class="activity-dot"></div>
+              <div class="activity-dot" />
               <div class="activity-content">
-                <p class="activity-title">{{ app.company }} — {{ app.role }}</p>
-                <p class="activity-date">{{ formatDate(app.appliedAt) }}</p>
+                <p class="activity-title">
+                  {{ app.company }} — {{ app.role }}
+                </p>
+                <p class="activity-date">
+                  {{ formatDate(app.appliedAt) }}
+                </p>
                 <span
                   class="status-pill"
                   :style="{
@@ -100,14 +127,20 @@
                     color: statusConfig[app.status]?.color,
                   }"
                 >
-                  <span class="pill-dot" :style="{ background: statusConfig[app.status]?.color }"></span>
+                  <span
+                    class="pill-dot"
+                    :style="{ background: statusConfig[app.status]?.color }"
+                  />
                   {{ statusConfig[app.status]?.label }}
                 </span>
               </div>
             </div>
           </div>
         </div>
-        <button class="btn-outline" @click="handleViewApplications">
+        <button
+          class="btn-outline"
+          @click="handleViewApplications"
+        >
           View All Applications
         </button>
       </div>
@@ -116,8 +149,13 @@
     <!-- Recent Applications - Desktop Table -->
     <section class="card desktop-only">
       <div class="card-header border-bottom">
-        <h3 class="card-title">Recent Applications</h3>
-        <button class="btn-primary" @click="handleNewApplication">
+        <h3 class="card-title">
+          Recent Applications
+        </h3>
+        <button
+          class="btn-primary"
+          @click="handleNewApplication"
+        >
           <span class="material-symbols-outlined">add</span>
           New Application
         </button>
@@ -134,7 +172,12 @@
           </thead>
           <tbody>
             <tr v-if="recentApplications.length === 0">
-              <td colspan="4" class="empty-row">No applications yet</td>
+              <td
+                colspan="4"
+                class="empty-row"
+              >
+                No applications yet
+              </td>
             </tr>
             <tr
               v-for="app in recentApplications"
@@ -144,11 +187,15 @@
             >
               <td>
                 <div class="company-cell">
-                  <div class="company-avatar">{{ app.company[0] }}</div>
+                  <div class="company-avatar">
+                    {{ app.company[0] }}
+                  </div>
                   <span class="company-name">{{ app.company }}</span>
                 </div>
               </td>
-              <td class="text-secondary">{{ app.role }}</td>
+              <td class="text-secondary">
+                {{ app.role }}
+              </td>
               <td>
                 <span
                   class="status-pill"
@@ -160,7 +207,9 @@
                   {{ statusConfig[app.status]?.label }}
                 </span>
               </td>
-              <td class="text-secondary text-xs">{{ timeAgo(app.updatedAt) }}</td>
+              <td class="text-secondary text-xs">
+                {{ timeAgo(app.updatedAt) }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -170,8 +219,13 @@
     <!-- Recent Applications - Mobile Cards -->
     <section class="card mobile-only">
       <div class="card-header">
-        <h3 class="card-title">Recent Applications</h3>
-        <button class="btn-primary btn-small" @click="handleNewApplication">
+        <h3 class="card-title">
+          Recent Applications
+        </h3>
+        <button
+          class="btn-primary btn-small"
+          @click="handleNewApplication"
+        >
           <span class="material-symbols-outlined">add</span>
         </button>
       </div>
@@ -184,10 +238,16 @@
         >
           <div class="mobile-app-header">
             <div class="company-cell">
-              <div class="company-avatar">{{ app.company[0] }}</div>
+              <div class="company-avatar">
+                {{ app.company[0] }}
+              </div>
               <div>
-                <div class="company-name">{{ app.company }}</div>
-                <div class="app-role">{{ app.role }}</div>
+                <div class="company-name">
+                  {{ app.company }}
+                </div>
+                <div class="app-role">
+                  {{ app.role }}
+                </div>
               </div>
             </div>
             <span
@@ -204,18 +264,23 @@
             <span class="text-secondary text-xs">Updated {{ timeAgo(app.updatedAt) }}</span>
           </div>
         </div>
-        <div v-if="recentApplications.length === 0" class="empty">
+        <div
+          v-if="recentApplications.length === 0"
+          class="empty"
+        >
           No applications yet
         </div>
       </div>
-      <button class="btn-outline" @click="handleViewApplications">
+      <button
+        class="btn-outline"
+        @click="handleViewApplications"
+      >
         View All Applications
       </button>
     </section>
   </div>
 </template>
 
-```vue
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useApplicationsStore } from '../stores/applications.store';
