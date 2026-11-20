@@ -32,9 +32,43 @@ export class NotificationsProcessor extends WorkerHost {
     }
   }
 
+  private isApplicationStatus(value: unknown): value is ApplicationStatus {
+    return Object.values(ApplicationStatus).includes(
+      value as ApplicationStatus,
+    );
+  }
+
+  private isValidPayload(value: unknown): value is StatusChangeJobPayload {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+
+    const payload = value as Record<string, unknown>;
+
+    return (
+      typeof payload.outboxEventId === 'string' &&
+      payload.outboxEventId.trim().length > 0 &&
+      typeof payload.applicationId === 'string' &&
+      payload.applicationId.trim().length > 0 &&
+      typeof payload.company === 'string' &&
+      payload.company.trim().length > 0 &&
+      typeof payload.role === 'string' &&
+      payload.role.trim().length > 0 &&
+      this.isApplicationStatus(payload.toStatus) &&
+      (payload.fromStatus === null ||
+        this.isApplicationStatus(payload.fromStatus))
+    );
+  }
+
   private async handleStatusChange(
     job: Job<StatusChangeJobPayload, void, string>,
   ): Promise<void> {
+    const payload: unknown = job.data;
+
+    if (!this.isValidPayload(payload)) {
+      throw new Error(`Invalid status-change job payload: ${job.id}`);
+    }
+
     const {
       outboxEventId,
       applicationId,
@@ -42,11 +76,7 @@ export class NotificationsProcessor extends WorkerHost {
       role,
       fromStatus,
       toStatus,
-    } = job.data;
-
-    if (!outboxEventId || !applicationId) {
-      throw new Error(`Invalid status-change job payload: ${job.id}`);
-    }
+    } = payload;
 
     try {
       await this.prisma.notification.create({

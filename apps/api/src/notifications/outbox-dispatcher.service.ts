@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { Prisma, OutboxStatus } from '@prisma/client';
+import { Prisma, OutboxStatus, ApplicationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
@@ -23,7 +23,41 @@ export class OutboxDispatcherService {
     @InjectQueue('notifications')
     private readonly queue: Queue,
   ) {}
+  private isApplicationStatus(value: unknown): value is ApplicationStatus {
+  return Object.values(ApplicationStatus).includes(
+    value as ApplicationStatus,
+    );
+  }
 
+  private isValidStatusChangePayload(
+    payload: Prisma.JsonValue,
+  ): payload is Prisma.JsonObject & {
+    applicationId: string;
+    company: string;
+    role: string;
+    fromStatus: ApplicationStatus | null;
+    toStatus: ApplicationStatus;
+  } {
+    if (
+      typeof payload !== 'object' ||
+      payload === null ||
+      Array.isArray(payload)
+    ) {
+      return false;
+    }
+
+    return (
+      typeof payload.applicationId === 'string' &&
+      payload.applicationId.trim().length > 0 &&
+      typeof payload.company === 'string' &&
+      payload.company.trim().length > 0 &&
+      typeof payload.role === 'string' &&
+      payload.role.trim().length > 0 &&
+      this.isApplicationStatus(payload.toStatus) &&
+      (payload.fromStatus === null ||
+        this.isApplicationStatus(payload.fromStatus))
+    );
+  }
   private async recoverExpiredEvents(): Promise<number> {
     const recovered = await this.prisma.$transaction(
       (tx) =>
@@ -142,13 +176,12 @@ export class OutboxDispatcherService {
     for (const event of events) {
       try {
         const jobName = this.getJobName(event.eventType);
-        if (
-          typeof event.payload !== 'object' ||
-          event.payload === null ||
-          Array.isArray(event.payload)
-        ) {
-          throw new Error(`Invalid payload for outbox event ${event.id}`);
+        if (!this.isValidStatusChangePayload(event.payload)) {
+          throw new Error(
+            `Invalid status-change payload for outbox event ${event.id}`,
+          );
         }
+
         const jobPayload = {
           ...event.payload,
           outboxEventId: event.id,

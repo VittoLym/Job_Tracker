@@ -140,7 +140,13 @@ describe('OutboxDispatcherService', () => {
         aggregateType: 'Application',
         aggregateId: randomUUID(),
         eventType: 'APPLICATION_STATUS_CHANGED',
-        payload: {},
+        payload: {
+          applicationId: randomUUID(),
+          company: 'Test Company',
+          role: 'Backend Developer',
+          fromStatus: 'APPLIED',
+          toStatus: 'INTERVIEW',
+        },
       },
     });
 
@@ -177,7 +183,13 @@ describe('OutboxDispatcherService', () => {
         aggregateType: 'Application',
         aggregateId: randomUUID(),
         eventType: 'APPLICATION_STATUS_CHANGED',
-        payload: {},
+        payload: {
+          applicationId: randomUUID(),
+          company: 'Test Company',
+          role: 'Backend Developer',
+          fromStatus: 'APPLIED',
+          toStatus: 'INTERVIEW',
+        },
         attempts: 4,
         availableAt: new Date(Date.now() - 10_000),
       },
@@ -212,6 +224,9 @@ describe('OutboxDispatcherService', () => {
         eventType: 'APPLICATION_STATUS_CHANGED',
         payload: {
           applicationId: aggregateId,
+          company: 'Test Company',
+          role: 'Backend Developer',
+          fromStatus: 'APPLIED',
           toStatus: 'INTERVIEW',
         },
       },
@@ -231,7 +246,41 @@ describe('OutboxDispatcherService', () => {
     const job = await queue.getJob(`outbox-${event.id}`);
     expect(job).not.toBeNull();
   });
+  it('should reject invalid payloads without publishing to BullMQ', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {
+          applicationId: aggregateId,
+          toStatus: 'INTERVIEW',
+        },
+      },
+    });
 
+    eventIds.push(event.id);
+
+    const addSpy = jest.spyOn(queue, 'add');
+
+    try {
+      await dispatcher.dispatchPendingEvents();
+
+      const updatedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+        where: { id: event.id },
+      });
+
+      expect(addSpy).not.toHaveBeenCalled();
+      expect(updatedEvent.status).toBe(OutboxStatus.PENDING);
+      expect(updatedEvent.attempts).toBe(1);
+      expect(updatedEvent.lastError).toContain(
+        'Invalid status-change payload',
+      );
+      expect(updatedEvent.lockedAt).toBeNull();
+    } finally {
+      addSpy.mockRestore();
+    }
+  });
   it('should prevent overlapping scheduled dispatches', async () => {
     const dispatchSpy = jest
       .spyOn(dispatcher, 'dispatchPendingEvents')
