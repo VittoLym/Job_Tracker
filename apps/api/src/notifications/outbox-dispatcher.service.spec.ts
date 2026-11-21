@@ -216,6 +216,41 @@ describe('OutboxDispatcherService', () => {
       addSpy.mockRestore();
     }
   });
+
+  it('should move unsupported event types directly to DEAD', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'UNKNOWN_EVENT_TYPE',
+        payload: {},
+      },
+    });
+
+    eventIds.push(event.id);
+
+    const addSpy = jest.spyOn(queue, 'add');
+
+    try {
+      await dispatcher.dispatchPendingEvents();
+
+      const updatedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+        where: { id: event.id },
+      });
+
+      expect(updatedEvent.status).toBe(OutboxStatus.DEAD);
+      expect(updatedEvent.attempts).toBe(1);
+      expect(updatedEvent.lockedAt).toBeNull();
+      expect(updatedEvent.lastError).toContain(
+        'Unsupported outbox event type: UNKNOWN_EVENT_TYPE',
+      );
+
+      expect(addSpy).not.toHaveBeenCalled();
+    } finally {
+      addSpy.mockRestore();
+    }
+  });
+
   it('should dispatch pending events when the scheduled handler runs', async () => {
     const event = await prisma.outboxEvent.create({
       data: {
@@ -246,6 +281,7 @@ describe('OutboxDispatcherService', () => {
     const job = await queue.getJob(`outbox-${event.id}`);
     expect(job).not.toBeNull();
   });
+
   it('should reject invalid payloads without publishing to BullMQ', async () => {
     const event = await prisma.outboxEvent.create({
       data: {
@@ -281,6 +317,7 @@ describe('OutboxDispatcherService', () => {
       addSpy.mockRestore();
     }
   });
+
   it('should prevent overlapping scheduled dispatches', async () => {
     const dispatchSpy = jest
       .spyOn(dispatcher, 'dispatchPendingEvents')
@@ -298,6 +335,167 @@ describe('OutboxDispatcherService', () => {
       expect(dispatchSpy).toHaveBeenCalledTimes(1);
     } finally {
       dispatchSpy.mockRestore();
+    }
+  });
+
+  it('should count only successfully published events', async () => {
+    const validEvent = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {
+          applicationId: randomUUID(),
+          company: 'Test Company',
+          role: 'Backend Developer',
+          fromStatus: 'APPLIED',
+          toStatus: 'INTERVIEW',
+        },
+      },
+    });
+
+    const unsupportedEvent = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'UNKNOWN_EVENT_TYPE',
+        payload: {},
+      },
+    });
+
+    eventIds.push(validEvent.id, unsupportedEvent.id);
+
+    const dispatched = await dispatcher.dispatchPendingEvents();
+
+    const updatedValidEvent = await prisma.outboxEvent.findUniqueOrThrow({
+      where: { id: validEvent.id },
+    });
+
+    const updatedUnsupportedEvent =
+      await prisma.outboxEvent.findUniqueOrThrow({
+        where: { id: unsupportedEvent.id },
+      });
+
+    expect(dispatched).toBe(1);
+    expect(updatedValidEvent.status).toBe(OutboxStatus.PUBLISHED);
+    expect(updatedUnsupportedEvent.status).toBe(OutboxStatus.DEAD);
+  });
+  it('should handle a failure marking an already enqueued event as PUBLISHED', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {
+          applicationId: randomUUID(),
+          company: 'Test Company',
+          role: 'Backend Developer',
+          fromStatus: 'APPLIED',
+          toStatus: 'INTERVIEW',
+        },
+      },
+    });
+
+    eventIds.push(event.id);
+
+    const addSpy = jest.spyOn(queue, 'add');
+    const updateSpy = jest
+      .spyOn(prisma.outboxEvent, 'updateMany')
+      .mockRejectedValueOnce(new Error('Database unavailable'));
+
+    try {
+      await dispatcher.dispatchPendingEvents();
+
+      expect(addSpy).toHaveBeenCalledTimes(1);
+
+      const jobId = `outbox-${event.id}`;
+      const job = await queue.getJob(jobId);
+
+      expect(job).toBeDefined();
+
+      const updatedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+        where: { id: event.id },
+      });
+
+      expect(updatedEvent.status).toBe(OutboxStatus.PENDING);
+      expect(updatedEvent.attempts).toBe(1);
+      expect(updatedEvent.lastError).toContain('Database unavailable');
+    } finally {
+      addSpy.mockRestore();
+      updateSpy.mockRestore();
+    }
+  });
+
+  it('should not create duplicate BullMQ jobs when retrying an already enqueued event', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {
+          applicationId: randomUUID(),
+          company: 'Test Company',
+          role: 'Backend Developer',
+          fromStatus: 'APPLIED',
+          toStatus: 'INTERVIEW',
+        },
+      },
+    });
+
+    eventIds.push(event.id);
+
+    const jobId = `outbox-${event.id}`;
+
+    const addSpy = jest.spyOn(queue, 'add');
+
+    const updateSpy = jest
+      .spyOn(prisma.outboxEvent, 'updateMany')
+      .mockRejectedValueOnce(new Error('Database unavailable'));
+
+    try {
+      // Primer despacho: BullMQ acepta el job,
+      // pero falla la actualización de PostgreSQL.
+      const firstDispatch = await dispatcher.dispatchPendingEvents();
+
+      expect(firstDispatch).toBe(0);
+      expect(addSpy).toHaveBeenCalledTimes(1);
+
+      let storedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+        where: { id: event.id },
+      });
+
+      expect(storedEvent.status).toBe(OutboxStatus.PENDING);
+
+      const originalJob = await queue.getJob(jobId);
+      expect(originalJob).toBeDefined();
+
+      // Hacemos que el evento vuelva a estar disponible inmediatamente.
+      await prisma.outboxEvent.update({
+        where: { id: event.id },
+        data: { availableAt: new Date(Date.now() - 1000) },
+      });
+
+      // Segundo despacho: se intenta agregar el mismo jobId.
+      const secondDispatch = await dispatcher.dispatchPendingEvents();
+
+      expect(secondDispatch).toBe(1);
+      expect(addSpy).toHaveBeenCalledTimes(2);
+
+      storedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+        where: { id: event.id },
+      });
+
+      expect(storedEvent.status).toBe(OutboxStatus.PUBLISHED);
+      expect(storedEvent.attempts).toBe(2);
+
+      // BullMQ conserva el mismo job, identificado por el mismo ID.
+      const retriedJob = await queue.getJob(jobId);
+
+      expect(retriedJob).toBeDefined();
+      expect(retriedJob?.id).toBe(originalJob?.id);
+    } finally {
+      addSpy.mockRestore();
+      updateSpy.mockRestore();
     }
   });
 });

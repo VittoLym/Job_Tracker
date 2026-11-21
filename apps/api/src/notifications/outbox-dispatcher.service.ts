@@ -11,7 +11,12 @@ interface ClaimedOutboxEvent {
   payload: Prisma.JsonValue;
   attempts: number;
 }
-
+class UnsupportedOutboxEventError extends Error {
+  constructor(eventType: string) {
+    super(`Unsupported outbox event type: ${eventType}`);
+    this.name = 'UnsupportedOutboxEventError';
+  }
+}
 @Injectable()
 export class OutboxDispatcherService {
   private readonly logger = new Logger(OutboxDispatcherService.name);
@@ -130,7 +135,7 @@ export class OutboxDispatcherService {
 
       if (dispatched > 0) {
         this.logger.log(
-          `Scheduled dispatch completed: ${dispatched} events processed`,
+          `Scheduled dispatch completed: ${dispatched} events published`,
         );
       }
     } catch (error) {
@@ -172,7 +177,7 @@ export class OutboxDispatcherService {
             event."attempts"
         `,
     );
-
+    let publishedCount = 0;
     for (const event of events) {
       try {
         const jobName = this.getJobName(event.eventType);
@@ -221,11 +226,14 @@ export class OutboxDispatcherService {
           );
         }
 
+        publishedCount++;
         this.logger.log(`Outbox event ${event.id} published to BullMQ`);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
 
+        const permanentError = error instanceof UnsupportedOutboxEventError;
         const exhausted = event.attempts >= this.MAX_ATTEMPTS;
+        const shouldMoveToDead = permanentError || exhausted;
 
         const retryDelays: Record<number, number> = {
           1: 5_000,
@@ -240,8 +248,8 @@ export class OutboxDispatcherService {
             status: OutboxStatus.PROCESSING,
           },
           data: {
-            status: exhausted ? OutboxStatus.DEAD : OutboxStatus.PENDING,
-            ...(exhausted
+            status: shouldMoveToDead ? OutboxStatus.DEAD : OutboxStatus.PENDING,
+            ...(shouldMoveToDead
               ? {}
               : {
                   availableAt: new Date(
@@ -253,7 +261,11 @@ export class OutboxDispatcherService {
           },
         });
 
-        if (exhausted) {
+        if (permanentError) {
+          this.logger.error(
+            `Outbox event ${event.id} moved to DEAD due to unsupported event type: ${message}`,
+          );
+        } else if (exhausted) {
           this.logger.error(
             `Outbox event ${event.id} moved to DEAD after ${event.attempts} attempts: ${message}`,
           );
@@ -265,7 +277,7 @@ export class OutboxDispatcherService {
       }
     }
 
-    return events.length;
+    return publishedCount;
   }
   private getJobName(eventType: string): string {
     switch (eventType) {
@@ -273,7 +285,7 @@ export class OutboxDispatcherService {
         return 'status-change';
 
       default:
-        throw new Error(`Unsupported outbox event type: ${eventType}`);
+        throw new UnsupportedOutboxEventError(eventType);
     }
   }
 }
