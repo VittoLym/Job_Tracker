@@ -300,7 +300,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useApplicationsStore } from '../stores/applications.store';
 import ApplicationModal from '../components/ApplicationModal.vue';
 import { statusConfig } from '../constants/application-status';
@@ -318,11 +318,11 @@ const emit = defineEmits<{
 }>();
 function openModal(app?: Application) {
   modalOpen.value = true;
+  console.log(app)
 }
 // State
 const isDark = ref(false);
 const userName = ref(props.userName || 'Alex');
-
 // --------------------------------------------------
 // STORE DATA
 // --------------------------------------------------
@@ -406,10 +406,6 @@ function timeAgo(date: string) {
   }
 
   return `${days}d ago`;
-}
-
-function applyTheme(dark: boolean) {
-  document.documentElement.classList.toggle('dark', dark);
 }
 
 async function handleSave(payload: ApplicationPayload) {
