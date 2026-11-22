@@ -29,8 +29,8 @@ export class OutboxDispatcherService {
     private readonly queue: Queue,
   ) {}
   private isApplicationStatus(value: unknown): value is ApplicationStatus {
-  return Object.values(ApplicationStatus).includes(
-    value as ApplicationStatus,
+    return Object.values(ApplicationStatus).includes(
+      value as ApplicationStatus,
     );
   }
 

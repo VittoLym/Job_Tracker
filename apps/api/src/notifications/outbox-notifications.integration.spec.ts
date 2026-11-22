@@ -1,15 +1,15 @@
-
 import { randomUUID } from 'crypto';
-import { Queue } from 'bullmq';
+import { Queue, Job } from 'bullmq';
 import { ApplicationStatus, OutboxStatus } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { OutboxDispatcherService } from './outbox-dispatcher.service';
 import { NotificationsProcessor } from './notifications.processor';
+import { StatusChangeJobPayload } from './notifications.processor';
 
 describe('Outbox + Notifications integration', () => {
   let prisma: PrismaService;
-  let queue: Queue;
+  let queue: Queue<StatusChangeJobPayload, void>;
   let dispatcher: OutboxDispatcherService;
   let processor: NotificationsProcessor;
 
@@ -27,7 +27,7 @@ describe('Outbox + Notifications integration', () => {
     prisma = new PrismaService();
     await prisma.$connect();
 
-    queue = new Queue(queueName, { connection });
+    queue = new Queue<StatusChangeJobPayload, void>(queueName, { connection });
     await queue.waitUntilReady();
 
     dispatcher = new OutboxDispatcherService(prisma, queue);
@@ -103,7 +103,8 @@ describe('Outbox + Notifications integration', () => {
       expect(storedEvent.status).toBe(OutboxStatus.PENDING);
 
       // 4. Recuperar el job creado en BullMQ.
-      let firstJob = await queue.getJob(jobId);
+      let firstJob: Job<StatusChangeJobPayload, void> | undefined =
+        await queue.getJob(jobId);
 
       expect(firstJob).toBeDefined();
 

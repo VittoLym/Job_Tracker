@@ -309,9 +309,7 @@ describe('OutboxDispatcherService', () => {
       expect(addSpy).not.toHaveBeenCalled();
       expect(updatedEvent.status).toBe(OutboxStatus.PENDING);
       expect(updatedEvent.attempts).toBe(1);
-      expect(updatedEvent.lastError).toContain(
-        'Invalid status-change payload',
-      );
+      expect(updatedEvent.lastError).toContain('Invalid status-change payload');
       expect(updatedEvent.lockedAt).toBeNull();
     } finally {
       addSpy.mockRestore();
@@ -371,10 +369,9 @@ describe('OutboxDispatcherService', () => {
       where: { id: validEvent.id },
     });
 
-    const updatedUnsupportedEvent =
-      await prisma.outboxEvent.findUniqueOrThrow({
-        where: { id: unsupportedEvent.id },
-      });
+    const updatedUnsupportedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+      where: { id: unsupportedEvent.id },
+    });
 
     expect(dispatched).toBe(1);
     expect(updatedValidEvent.status).toBe(OutboxStatus.PUBLISHED);

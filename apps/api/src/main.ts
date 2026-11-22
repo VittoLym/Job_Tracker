@@ -21,8 +21,8 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
 }
-try{
+try {
   void bootstrap();
-}catch(e){
-  console.log(e)
+} catch (e) {
+  console.log(e);
 }

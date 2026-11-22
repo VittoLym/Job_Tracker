@@ -151,100 +151,100 @@ describe('NotificationsProcessor', () => {
     expect(prismaMock.notification.create).toHaveBeenCalledTimes(1);
   });
   it('should accept a null fromStatus', async () => {
-  const job = makeJob('status-change', {
-    outboxEventId: 'outbox-123',
-    applicationId: 'application-123',
-    company: 'Acme',
-    role: 'Full Stack Developer',
-    fromStatus: null,
-    toStatus: ApplicationStatus.APPLIED,
-  });
+    const job = makeJob('status-change', {
+      outboxEventId: 'outbox-123',
+      applicationId: 'application-123',
+      company: 'Acme',
+      role: 'Full Stack Developer',
+      fromStatus: null,
+      toStatus: ApplicationStatus.APPLIED,
+    });
 
-  prismaMock.notification.create.mockResolvedValue({
-    id: 'outbox-123',
-    applicationId: 'application-123',
-  });
-
-  await expect(processor.process(job)).resolves.toBeUndefined();
-
-  expect(prismaMock.notification.create).toHaveBeenCalledWith({
-    data: {
+    prismaMock.notification.create.mockResolvedValue({
       id: 'outbox-123',
       applicationId: 'application-123',
-      type: 'STATUS_CHANGE',
-      payload: {
-        company: 'Acme',
-        role: 'Full Stack Developer',
-        fromStatus: null,
-        toStatus: ApplicationStatus.APPLIED,
+    });
+
+    await expect(processor.process(job)).resolves.toBeUndefined();
+
+    expect(prismaMock.notification.create).toHaveBeenCalledWith({
+      data: {
+        id: 'outbox-123',
+        applicationId: 'application-123',
+        type: 'STATUS_CHANGE',
+        payload: {
+          company: 'Acme',
+          role: 'Full Stack Developer',
+          fromStatus: null,
+          toStatus: ApplicationStatus.APPLIED,
+        },
       },
-    },
-  });
-});
-
-it('should reject payloads with missing company', async () => {
-  const job = makeJob('status-change', {
-    outboxEventId: 'outbox-123',
-    applicationId: 'application-123',
-    role: 'Full Stack Developer',
-    fromStatus: ApplicationStatus.APPLIED,
-    toStatus: ApplicationStatus.INTERVIEW,
-  } as Partial<StatusChangeJobPayload>);
-
-  await expect(processor.process(job)).rejects.toThrow(
-    'Invalid status-change job payload',
-  );
-
-  expect(prismaMock.notification.create).not.toHaveBeenCalled();
-});
-
-it('should reject payloads with missing role', async () => {
-  const job = makeJob('status-change', {
-    outboxEventId: 'outbox-123',
-    applicationId: 'application-123',
-    company: 'Acme',
-    fromStatus: ApplicationStatus.APPLIED,
-    toStatus: ApplicationStatus.INTERVIEW,
-  } as Partial<StatusChangeJobPayload>);
-
-  await expect(processor.process(job)).rejects.toThrow(
-    'Invalid status-change job payload',
-  );
-
-  expect(prismaMock.notification.create).not.toHaveBeenCalled();
-});
-
-it('should reject invalid toStatus values', async () => {
-  const job = makeJob('status-change', {
-    outboxEventId: 'outbox-123',
-    applicationId: 'application-123',
-    company: 'Acme',
-    role: 'Full Stack Developer',
-    fromStatus: ApplicationStatus.APPLIED,
-    toStatus: 'INVALID_STATUS' as ApplicationStatus,
+    });
   });
 
-  await expect(processor.process(job)).rejects.toThrow(
-    'Invalid status-change job payload',
-  );
+  it('should reject payloads with missing company', async () => {
+    const job = makeJob('status-change', {
+      outboxEventId: 'outbox-123',
+      applicationId: 'application-123',
+      role: 'Full Stack Developer',
+      fromStatus: ApplicationStatus.APPLIED,
+      toStatus: ApplicationStatus.INTERVIEW,
+    });
 
-  expect(prismaMock.notification.create).not.toHaveBeenCalled();
-});
+    await expect(processor.process(job)).rejects.toThrow(
+      'Invalid status-change job payload',
+    );
 
-it('should reject invalid fromStatus values', async () => {
-  const job = makeJob('status-change', {
-    outboxEventId: 'outbox-123',
-    applicationId: 'application-123',
-    company: 'Acme',
-    role: 'Full Stack Developer',
-    fromStatus: 'INVALID_STATUS' as ApplicationStatus,
-    toStatus: ApplicationStatus.INTERVIEW,
+    expect(prismaMock.notification.create).not.toHaveBeenCalled();
   });
 
-  await expect(processor.process(job)).rejects.toThrow(
-    'Invalid status-change job payload',
-  );
+  it('should reject payloads with missing role', async () => {
+    const job = makeJob('status-change', {
+      outboxEventId: 'outbox-123',
+      applicationId: 'application-123',
+      company: 'Acme',
+      fromStatus: ApplicationStatus.APPLIED,
+      toStatus: ApplicationStatus.INTERVIEW,
+    });
 
-  expect(prismaMock.notification.create).not.toHaveBeenCalled();
-});
+    await expect(processor.process(job)).rejects.toThrow(
+      'Invalid status-change job payload',
+    );
+
+    expect(prismaMock.notification.create).not.toHaveBeenCalled();
+  });
+
+  it('should reject invalid toStatus values', async () => {
+    const job = makeJob('status-change', {
+      outboxEventId: 'outbox-123',
+      applicationId: 'application-123',
+      company: 'Acme',
+      role: 'Full Stack Developer',
+      fromStatus: ApplicationStatus.APPLIED,
+      toStatus: 'INVALID_STATUS' as ApplicationStatus,
+    });
+
+    await expect(processor.process(job)).rejects.toThrow(
+      'Invalid status-change job payload',
+    );
+
+    expect(prismaMock.notification.create).not.toHaveBeenCalled();
+  });
+
+  it('should reject invalid fromStatus values', async () => {
+    const job = makeJob('status-change', {
+      outboxEventId: 'outbox-123',
+      applicationId: 'application-123',
+      company: 'Acme',
+      role: 'Full Stack Developer',
+      fromStatus: 'INVALID_STATUS' as ApplicationStatus,
+      toStatus: ApplicationStatus.INTERVIEW,
+    });
+
+    await expect(processor.process(job)).rejects.toThrow(
+      'Invalid status-change job payload',
+    );
+
+    expect(prismaMock.notification.create).not.toHaveBeenCalled();
+  });
 });
