@@ -498,4 +498,77 @@ describe('OutboxDispatcherService', () => {
       updateSpy.mockRestore();
     }
   });
+
+  it('should recreate a removed BullMQ job when retrying a pending outbox event', async () => {
+    const event = await prisma.outboxEvent.create({
+      data: {
+        aggregateType: 'Application',
+        aggregateId: randomUUID(),
+        eventType: 'APPLICATION_STATUS_CHANGED',
+        payload: {
+          applicationId: randomUUID(),
+          company: 'Test Company',
+          role: 'Backend Developer',
+          fromStatus: 'APPLIED',
+          toStatus: 'INTERVIEW',
+        },
+      },
+    });
+
+    eventIds.push(event.id);
+
+    const jobId = `outbox-${event.id}`;
+
+    const addSpy = jest.spyOn(queue, 'add');
+
+    const updateSpy = jest
+      .spyOn(prisma.outboxEvent, 'updateMany')
+      .mockRejectedValueOnce(new Error('Database unavailable'));
+
+    try {
+      // Primer despacho: BullMQ recibe el job,
+      // pero falla la actualización del Outbox.
+      await dispatcher.dispatchPendingEvents();
+
+      expect(addSpy).toHaveBeenCalledTimes(1);
+
+      let job = await queue.getJob(jobId);
+      expect(job).toBeDefined();
+
+      // Simulamos que BullMQ elimina el job original.
+      await job!.remove();
+
+      job = await queue.getJob(jobId);
+      expect(job).toBeUndefined();
+
+      // Hacemos que el evento vuelva a estar disponible.
+      await prisma.outboxEvent.update({
+        where: { id: event.id },
+        data: {
+          availableAt: new Date(Date.now() - 1000),
+        },
+      });
+
+      // Segundo despacho: debe poder crear el job nuevamente.
+      const dispatched = await dispatcher.dispatchPendingEvents();
+
+      expect(dispatched).toBe(1);
+      expect(addSpy).toHaveBeenCalledTimes(2);
+
+      const recreatedJob = await queue.getJob(jobId);
+
+      expect(recreatedJob).toBeDefined();
+      expect(recreatedJob?.id).toBe(jobId);
+
+      const updatedEvent = await prisma.outboxEvent.findUniqueOrThrow({
+        where: { id: event.id },
+      });
+
+      expect(updatedEvent.status).toBe(OutboxStatus.PUBLISHED);
+      expect(updatedEvent.attempts).toBe(2);
+    } finally {
+      addSpy.mockRestore();
+      updateSpy.mockRestore();
+    }
+  });
 });
