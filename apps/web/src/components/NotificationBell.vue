@@ -225,49 +225,55 @@ onUnmounted(() => {
 <style scoped>
 .notification-container {
   position: relative;
-  width: min-content;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .notification-trigger {
   position: relative;
   display: flex;
   align-items: center;
-  width: min-content;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   padding: 0;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: var(--sidebar-text);
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
 
-.notification-trigger:hover {
+.notification-trigger:hover,
+.notification-trigger[aria-expanded="true"] {
   color: var(--sidebar-text-hover);
+  background: rgba(128, 128, 128, 0.12);
+  border-color: var(--sidebar-border);
 }
-.notification-label {
-  font-size: 14px;
-  font-weight: 500;
+
+.notification-trigger .material-symbols-outlined {
+  font-size: 21px;
 }
 
 .notification-badge {
-  margin-left: auto;
-}
-
-.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 19px;
-  height: 19px;
-  padding: 0 5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid var(--sidebar-bg);
   border-radius: 20px;
   background: #ef4444;
   color: white;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
 }
-
 .notification-panel {
   position: absolute;
   z-index: 1000;
@@ -282,7 +288,11 @@ onUnmounted(() => {
   color: var(--text-primary);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
 }
-
+.notification-enter-from,
+.notification-leave-to {
+  opacity: 0;
+  transform: translateX(-6px);
+}
 .panel-header {
   display: flex;
   align-items: center;
@@ -510,14 +520,11 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .notification-trigger {
-    justify-content: center;
-    padding: 10px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
   }
-
-  .notification-label {
-    display: none;
-  }
-
+  
   .notification-badge {
     position: absolute;
     top: 2px;
@@ -530,7 +537,7 @@ onUnmounted(() => {
 
   .notification-panel {
     position: fixed;
-    top: 90px;
+    top: 70px;
     left: 84px;
     width: 340px;
     max-width: calc(100vw - 100px);
