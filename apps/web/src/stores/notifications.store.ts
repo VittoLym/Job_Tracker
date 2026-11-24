@@ -12,6 +12,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
   const count = computed(() => notifications.value.length);
 
   async function fetchAll() {
+    if (loading.value) return;
+
     loading.value = true;
     error.value = null;
 

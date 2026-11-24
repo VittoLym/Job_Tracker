@@ -12,7 +12,6 @@
       @click="togglePanel"
     >
       <span class="material-symbols-outlined">notifications</span>
-      <span class="notification-label">Notificaciones</span>
       <span
         v-if="store.count > 0"
         class="notification-badge"
@@ -226,16 +225,15 @@ onUnmounted(() => {
 <style scoped>
 .notification-container {
   position: relative;
-  width: 100%;
+  width: min-content;
 }
 
 .notification-trigger {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
+  width: min-content;
+  padding: 0;
   border: none;
   border-radius: 8px;
   background: transparent;

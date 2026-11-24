@@ -7,10 +7,15 @@
     <aside class="sidebar">
       <div class="sidebar-top">
         <div class="logo">
-          <div class="logo-icon">
-            <span class="material-symbols-outlined">work</span>
+          <div class="logo-brand">
+            <div class="logo-icon">
+              <span class="material-symbols-outlined">work</span>
+            </div>
+
+            <span class="logo-text">Job Tracker</span>
           </div>
-          <span class="logo-text">Job Tracker</span>
+
+          <NotificationBell />
         </div>
 
         <nav class="nav">
@@ -38,7 +43,6 @@
           <span class="material-symbols-outlined">settings</span>
           <span>Settings</span>
         </div>
-
         <button
           class="theme-toggle"
           type="button"
@@ -137,7 +141,6 @@ function goToNewApplication() {
 }
 </script>
 
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
@@ -232,7 +235,7 @@ body {
 .sidebar-bottom {
   display: flex;
   flex-direction: row;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   gap: 4px;
 }
@@ -241,8 +244,24 @@ body {
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 8px;
   padding: 4px 8px;
+}
+
+.logo-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.logo-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 
 .logo-icon {
@@ -436,6 +455,21 @@ body {
 
   .content>.dashboard {
     padding: 12px;
+  }
+}
+@media (max-width: 768px) {
+  .logo {
+    justify-content: center;
+    padding: 4px 0;
+    flex-direction: column;
+  }
+
+  .logo-brand {
+    justify-content: center;
+  }
+
+  .logo-text {
+    display: none;
   }
 }
 </style>
