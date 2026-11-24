@@ -310,7 +310,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
 import type {
   Application,
   ApplicationStatus,
@@ -318,10 +317,13 @@ import type {
 } from '../types';
 import { useApplicationsStore } from '../stores/applications.store';
 import ApplicationModal from '../components/ApplicationModal.vue';
-import { statusConfig } from '../constants/application-status.ts';
+import { statusConfig } from '../constants/application-status';
+import { useRoute, useRouter } from 'vue-router';
 
 const modalOpen = ref(false);
 const editingApp = ref<Application | null>(null);
+const route = useRoute();
+const router = useRouter();
 
 function openModal(app?: Application) {
   editingApp.value = app ?? null;
@@ -343,7 +345,6 @@ const store = useApplicationsStore();;
 // State
 const isDark = ref(false);
 const search = ref('');
-const route = useRoute();
 
 // Computed
 const filtered = computed(() => {
@@ -384,6 +385,31 @@ async function handleSave(payload: ApplicationPayload, id: string | null) {
 }
 function toggleFilter(status: ApplicationStatus) {
   store.statusFilter = store.statusFilter === status ? null : status;
+}
+async function handleApplicationQuery() {
+  const applicationId = route.query.applicationId;
+
+  if (typeof applicationId !== 'string') return;
+
+  // Asegurarnos de tener las postulaciones cargadas.
+  if (!store.applications.length) {
+    await store.fetchAll?.();
+  }
+
+  const application = store.applications.find(
+    app => app.id === applicationId,
+  );
+
+  if (application) {
+    openModal(application);
+  }
+
+  // Limpiar el parámetro para evitar reabrir el modal
+  // si el usuario actualiza la página o vuelve a navegar.
+  const query = { ...route.query };
+  delete query.applicationId;
+
+  await router.replace({ query });
 }
 function getStatusClass(status: string) {
   const classes = {
@@ -428,37 +454,42 @@ function toggleMenuOptions(id: string) {
 
 // Lifecycle
 onMounted(async () => {
-  // Cargar datos
   await store.fetchAll?.();
-  
+
+  // Abrir postulación si llegamos desde una notificación.
+  await handleApplicationQuery();
+
   // Theme
   const saved = localStorage.getItem('theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const prefersDark = window.matchMedia(
+    '(prefers-color-scheme: dark)',
+  ).matches;
+
   isDark.value = saved ? saved === 'dark' : prefersDark;
-  
-  // Media query para dark mode
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+  const mediaQuery = window.matchMedia(
+    '(prefers-color-scheme: dark)',
+  );
+
   const handler = (e: MediaQueryListEvent) => {
     if (!localStorage.getItem('theme')) {
       isDark.value = e.matches;
     }
   };
+
   mediaQuery.addEventListener('change', handler);
-  
-  // Abrir modal si viene con query param
-  if (route.query.new === 'true') {
+
+  // Abrir modal de creación.
+  if (route.query.new === 'true' || route.query.new === '1') {
     openModal();
   }
 });
 
 watch(
-  () => route.query.new,
-  (val) => {
-    if (val === 'true') {
-      openModal();
-    }
+  () => route.query.applicationId,
+  () => {
+    void handleApplicationQuery();
   },
-  { immediate: true }
 );
 </script>
 

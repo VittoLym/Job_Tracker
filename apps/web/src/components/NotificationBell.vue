@@ -123,9 +123,9 @@
               <button
                 class="view-application"
                 type="button"
-                @click="goToApplications"
+                @click="goToApplications(notification.applicationId)"
               >
-                Ver postulaciones
+                Ver postulación
                 <span class="material-symbols-outlined">arrow_outward</span>
               </button>
             </div>
@@ -178,9 +178,13 @@ function handleEscape(event: KeyboardEvent) {
   }
 }
 
-function goToApplications() {
+function goToApplications(applicationId: string) {
   isOpen.value = false;
-  void router.push('/applications');
+
+  void router.push({
+    name: 'applications',
+    query: { applicationId },
+  });
 }
 
 function formatDate(date: string): string {
