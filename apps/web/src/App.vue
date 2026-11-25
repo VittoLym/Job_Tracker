@@ -34,7 +34,6 @@
             <span class="material-symbols-outlined">work</span>
             <span>Applications</span>
           </RouterLink>
-          <NotificationBell />
         </nav>
       </div>
 
@@ -65,6 +64,7 @@
         />
       </RouterView>
     </main>
+    <ToastContainer/> 
   </div>
 </template>
 
@@ -73,6 +73,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { RouterLink, RouterView, useRouter } from 'vue-router';
 import { useNotificationsStore } from './stores/notifications.store';
 import NotificationBell from './components/NotificationBell.vue';
+import ToastContainer from './components/ToastContainer.vue';
 
 const isDark = ref(false);
 const router = useRouter();

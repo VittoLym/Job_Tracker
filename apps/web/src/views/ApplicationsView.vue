@@ -310,6 +310,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
+import { useToastStore } from '../stores/toast.store';
+
+const toast = useToastStore();
+
 import type {
   Application,
   ApplicationStatus,
@@ -402,6 +406,13 @@ async function handleApplicationQuery() {
 
   if (application) {
     openModal(application);
+  }else {
+    toast.showToast({
+      type: 'error',
+      title: 'Postulación no encontrada',
+      message:
+        'La postulación asociada a esta notificación ya no existe o fue eliminada.',
+    });
   }
 
   // Limpiar el parámetro para evitar reabrir el modal
@@ -445,6 +456,12 @@ function getFooterStatusClass(app: Application) {
 async function confirmDelete(id: string) {
   if (confirm('Delete this application?')) {
     await store.remove(id);
+    toast.showToast({
+      type: 'success',
+      title: 'Postulación Eliminada con Exito.',
+      message:
+        'La postulación asociada a esta notificación fue eliminada.',
+    });
   }
 }
 function toggleMenuOptions(id: string) {
