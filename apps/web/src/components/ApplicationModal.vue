@@ -127,9 +127,7 @@ import type {
   WorkMode,
 } from '../types';
 import { statusConfig } from '../constants/application-status';
-import { useToastStore } from '@/stores/toast.store';
 
-const toast = useToastStore() 
 const props = defineProps<{
   modelValue: boolean;
   application?: Application | null;
@@ -198,12 +196,6 @@ function close() {
 
 function submit() {
   if (!canSubmit.value) return;
-  toast.showToast({
-    type: 'success',
-    title: 'Postulación Creada con Exito.',
-    message:
-      'La postulación ha sido creada con exito.',
-  });
   emit(
     'save',
     {

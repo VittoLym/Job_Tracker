@@ -115,6 +115,7 @@
             v-for="app in filtered"
             :key="app.id"
             class="table-row"
+            @click="openModal(app)"
           >
             <td>
               <div class="company-cell">
@@ -162,14 +163,14 @@
               <button
                 class="icon-btn"
                 title="Edit"
-                @click="openModal(app)"
+                @click.stop="openModal(app)"
               >
                 <span class="material-symbols-outlined">edit</span>
               </button>
               <button
                 class="icon-btn danger"
                 title="Delete"
-                @click="confirmDelete(app.id)"
+                @click.stop="confirmDelete(app.id)"
               >
                 <span class="material-symbols-outlined">delete</span>
               </button>
@@ -311,9 +312,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useToastStore } from '../stores/toast.store';
-
-const toast = useToastStore();
-
 import type {
   Application,
   ApplicationStatus,
@@ -329,6 +327,7 @@ const editingApp = ref<Application | null>(null);
 const route = useRoute();
 const router = useRouter();
 
+const toast = useToastStore();
 function openModal(app?: Application) {
   editingApp.value = app ?? null;
   modalOpen.value = true;
@@ -344,7 +343,7 @@ const emit = defineEmits<{
 
 // Store
 // const store = useApplicationsStore();
-const store = useApplicationsStore();;
+const store = useApplicationsStore();
 
 // State
 const isDark = ref(false);
@@ -378,14 +377,45 @@ function formatDate(date: string) {
     day: 'numeric' 
   });
 }
-async function handleSave(payload: ApplicationPayload, id: string | null) {
-  if (id) {
-    await store.update(id, payload);
-  } else {
-    await store.create(payload);
+async function handleSave(
+  payload: ApplicationPayload,
+  id: string | null,
+) {
+  const isEditing = Boolean(id);
+
+  try {
+    if (id) {
+      await store.update(id, payload);
+    } else {
+      await store.create(payload);
+    }
+
+    modalOpen.value = false;
+
+    toast.showToast({
+      type: 'success',
+      title: isEditing
+        ? 'Postulación actualizada'
+        : 'Postulación creada',
+      message: isEditing
+        ? 'Los cambios se guardaron correctamente.'
+        : 'La postulación se creó correctamente.',
+    });
+
+    emit('newApplication');
+  } catch (error) {
+    toast.showToast({
+      type: 'error',
+      title: isEditing
+        ? 'Error al actualizar'
+        : 'Error al crear',
+      message: isEditing
+        ? 'No se pudieron guardar los cambios.'
+        : 'No se pudo crear la postulación.',
+    });
+
+    console.error('Error al guardar la postulación:', error);
   }
-  modalOpen.value = false;
-  emit('newApplication');
 }
 function toggleFilter(status: ApplicationStatus) {
   store.statusFilter = store.statusFilter === status ? null : status;
@@ -408,15 +438,17 @@ async function handleApplicationQuery() {
     openModal(application);
   }else {
     toast.showToast({
-      type: 'error',
+      type: 'info',
       title: 'Postulación no encontrada',
       message:
         'La postulación asociada a esta notificación ya no existe o fue eliminada.',
     });
   }
+  clearApplicationQuery()
+}
+async function clearApplicationQuery() {
+  if (!route.query.applicationId) return;
 
-  // Limpiar el parámetro para evitar reabrir el modal
-  // si el usuario actualiza la página o vuelve a navegar.
   const query = { ...route.query };
   delete query.applicationId;
 
@@ -460,7 +492,7 @@ async function confirmDelete(id: string) {
       type: 'success',
       title: 'Postulación Eliminada con Exito.',
       message:
-        'La postulación asociada a esta notificación fue eliminada.',
+        'La postulación se elimino con exito.',
     });
   }
 }
@@ -471,8 +503,6 @@ function toggleMenuOptions(id: string) {
 
 // Lifecycle
 onMounted(async () => {
-  await store.fetchAll?.();
-
   // Abrir postulación si llegamos desde una notificación.
   await handleApplicationQuery();
 
@@ -508,6 +538,11 @@ watch(
     void handleApplicationQuery();
   },
 );
+watch(modalOpen,(isOpen)=>{
+  if(!isOpen){
+    void clearApplicationQuery()
+  }
+})
 </script>
 
 <style scoped>
