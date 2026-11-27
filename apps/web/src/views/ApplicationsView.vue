@@ -287,11 +287,17 @@
 
       <!-- Cards -->
       <div class="cards-container">
-        <div
-          v-if="store.loading"
-          class="empty"
-        >
+        <div v-if="viewState === 'loading'" class="empty">
           Loading...
+        </div>
+
+        <div v-else-if="viewState === 'error'" class="empty-state">
+          <h3>Something went wrong</h3>
+          <p>{{ store.error }}</p>
+
+          <button type="button" @click="store.fetchAll()">
+            Try again
+          </button>
         </div>
         <div
           v-else-if="emptyState"
@@ -494,6 +500,14 @@ type EmptyState =
   | 'no-search-results'
   | 'no-filter-results'
   | 'no-matches';
+
+  const viewState = computed(() => {
+  if (store.loading) return 'loading';
+  if (store.error) return 'error';
+  if (emptyState.value) return 'empty';
+
+  return 'data';
+});
 
 const emptyState = computed<EmptyState | null>(() => {
   if (store.applications.length > 0 && filtered.value.length > 0) {
@@ -891,7 +905,12 @@ watch(modalOpen,(isOpen)=>{
   padding: 32px 20px;
   text-align: center;
 }
-
+.empty-state div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
 .empty-state-icon {
   font-size: 42px;
   color: var(--text-muted);

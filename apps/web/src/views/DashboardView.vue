@@ -3,7 +3,7 @@
     <div class="mobile-brand">
       <div class="mobile-brand-text">
         <h1>Job Tracker</h1>
-        <span>Applications</span>
+        <span>Dashboard</span>
       </div>
     </div>
 
