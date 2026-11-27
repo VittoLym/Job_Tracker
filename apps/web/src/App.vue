@@ -354,7 +354,7 @@ body {
 /* ===== Main Content ===== */
 .content {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   background: var(--bg-content);

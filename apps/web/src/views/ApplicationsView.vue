@@ -88,10 +88,70 @@
         Loading...
       </div>
       <div
-        v-else-if="filtered.length === 0"
-        class="empty"
+        v-else-if="emptyState"
+        class="empty-state"
       >
-        No applications found. Add one!
+        <div v-if="emptyState === 'no-applications'">
+          <span class="material-symbols-outlined empty-state-icon">
+            work_outline
+          </span>
+
+          <h3>No applications yet</h3>
+          <p>Start tracking your job search by adding your first application.</p>
+
+          <button
+            class="btn-primary"
+            @click="openModal()"
+          >
+            <span class="material-symbols-outlined">add</span>
+            Add your first application
+          </button>
+        </div>
+        <div v-else-if="emptyState === 'no-search-results'">
+          <span class="material-symbols-outlined empty-state-icon">
+            search_off
+          </span>
+
+          <h3>No matching applications</h3>
+          <p>We couldn't find any applications matching "{{ search }}".</p>
+
+          <button
+            class="btn-secondary"
+            @click="clearSearch"
+          >
+            Clear search
+          </button>
+        </div>
+        <div v-else-if="emptyState === 'no-filter-results'">
+          <span class="material-symbols-outlined empty-state-icon">
+            filter_list_off
+          </span>
+
+          <h3>No applications in this status</h3>
+          <p>There are currently no applications with this status.</p>
+
+          <button
+            class="btn-secondary"
+            @click="store.statusFilter = null"
+          >
+            Show all applications
+          </button>
+        </div>
+        <div v-else>
+          <span class="material-symbols-outlined empty-state-icon">
+            filter_alt_off
+          </span>
+
+          <h3>No matching applications</h3>
+          <p>Try changing your search or removing the selected status filter.</p>
+
+          <button
+            class="btn-secondary"
+            @click="clearFilters"
+          >
+            Clear filters
+          </button>
+        </div>
       </div>
       <table
         v-else
@@ -234,10 +294,70 @@
           Loading...
         </div>
         <div
-          v-else-if="filtered.length === 0"
-          class="empty"
+          v-else-if="emptyState"
+          class="empty-state"
         >
-          No applications found.
+          <div v-if="emptyState === 'no-applications'">
+            <span class="material-symbols-outlined empty-state-icon">
+              work_outline
+            </span>
+
+            <h3>No applications yet</h3>
+            <p>Start tracking your job search by adding your first application.</p>
+
+            <button
+              class="btn-primary"
+              @click="openModal()"
+            >
+              <span class="material-symbols-outlined">add</span>
+              Add your first application
+            </button>
+          </div>
+          <div v-else-if="emptyState === 'no-search-results'">
+            <span class="material-symbols-outlined empty-state-icon">
+              search_off
+            </span>
+
+            <h3>No matching applications</h3>
+            <p>We couldn't find any applications matching "{{ search }}".</p>
+
+            <button
+              class="btn-secondary"
+              @click="clearSearch"
+            >
+              Clear search
+            </button>
+          </div>
+          <div v-else-if="emptyState === 'no-filter-results'">
+            <span class="material-symbols-outlined empty-state-icon">
+              filter_list_off
+            </span>
+
+            <h3>No applications in this status</h3>
+            <p>There are currently no applications with this status.</p>
+
+            <button
+              class="btn-secondary"
+              @click="store.statusFilter = null"
+            >
+              Show all applications
+            </button>
+          </div>
+          <div v-else>
+            <span class="material-symbols-outlined empty-state-icon">
+              filter_alt_off
+            </span>
+
+            <h3>No matching applications</h3>
+            <p>Try changing your search or removing the selected status filter.</p>
+
+            <button
+              class="btn-secondary"
+              @click="clearFilters"
+            >
+              Clear filters
+            </button>
+          </div>
         </div>
         <div
           v-for="app in filtered"
@@ -369,8 +489,40 @@ const filtered = computed(() => {
   
   return list;
 });
+type EmptyState =
+  | 'no-applications'
+  | 'no-search-results'
+  | 'no-filter-results'
+  | 'no-matches';
+
+const emptyState = computed<EmptyState | null>(() => {
+  if (store.applications.length > 0 && filtered.value.length > 0) {
+    return null;
+  }
+
+  if (store.applications.length === 0) {
+    return 'no-applications';
+  }
+
+  const hasSearch = search.value.trim().length > 0;
+  const hasFilter = store.statusFilter !== null;
+
+  if (hasSearch && hasFilter) return 'no-matches';
+  if (hasSearch) return 'no-search-results';
+  if (hasFilter) return 'no-filter-results';
+
+  return null;
+});
 
 // Methods
+function clearSearch() {
+  search.value = '';
+}
+
+function clearFilters() {
+  search.value = '';
+  store.statusFilter = null;
+}
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', { 
     month: 'short', 
@@ -425,26 +577,22 @@ async function handleApplicationQuery() {
 
   if (typeof applicationId !== 'string') return;
 
-  // Asegurarnos de tener las postulaciones cargadas.
-  if (!store.applications.length) {
-    await store.fetchAll?.();
-  }
-
   const application = store.applications.find(
     app => app.id === applicationId,
   );
 
   if (application) {
     openModal(application);
-  }else {
+  } else {
     toast.showToast({
       type: 'info',
       title: 'Postulación no encontrada',
       message:
         'La postulación asociada a esta notificación ya no existe o fue eliminada.',
     });
+
+    await clearApplicationQuery();
   }
-  clearApplicationQuery()
 }
 async function clearApplicationQuery() {
   if (!route.query.applicationId) return;
@@ -504,6 +652,7 @@ function toggleMenuOptions(id: string) {
 // Lifecycle
 onMounted(async () => {
   // Abrir postulación si llegamos desde una notificación.
+  await store.fetchAll()
   await handleApplicationQuery();
 
   // Theme
@@ -732,7 +881,51 @@ watch(modalOpen,(isOpen)=>{
   margin-top: 4px;
   margin-bottom: 24px;
 }
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 280px;
+  padding: 32px 20px;
+  text-align: center;
+}
 
+.empty-state-icon {
+  font-size: 42px;
+  color: var(--text-muted);
+}
+
+.empty-state h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.empty-state p {
+  max-width: 360px;
+  margin: 0 0 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.btn-secondary {
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-secondary);
+}
 /* ===== Theme Toggle ===== */
 .theme-toggle {
   display: flex;
