@@ -386,12 +386,40 @@
                 </p>
               </div>
             </div>
-            <button
-              class="app-card-menu"
-              @click.stop="toggleMenuOptions(app.id)"
-            >
-              <span class="material-symbols-outlined">more_vert</span>
-            </button>
+            <div class="app-card-actions">
+              <button
+                type="button"
+                class="app-card-menu"
+                aria-label="Application actions"
+                :aria-expanded="activeMenuId === app.id"
+                @click.stop="toggleMenuOptions(app.id)"
+              >
+                <span class="material-symbols-outlined">more_vert</span>
+              </button>
+
+              <div
+                v-if="activeMenuId === app.id"
+                class="app-card-dropdown"
+                @click.stop
+              >
+                <button
+                  type="button"
+                  @click="editApplication(app)"
+                >
+                  <span class="material-symbols-outlined">edit</span>
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  class="delete-action"
+                  @click="deleteApplication(app.id)"
+                >
+                  <span class="material-symbols-outlined">delete</span>
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="app-card-tags">
@@ -450,6 +478,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 const modalOpen = ref(false);
 const editingApp = ref<Application | null>(null);
+const activeMenuId = ref<string | null>(null);
 const route = useRoute();
 const router = useRouter();
 
@@ -669,8 +698,15 @@ async function confirmDelete(id: string) {
   }
 }
 function toggleMenuOptions(id: string) {
-  // Implement menu options
-  console.log('Menu options for:', id);
+  activeMenuId.value = activeMenuId.value === id ? null : id;
+}
+function editApplication(app: Application) {
+  activeMenuId.value = null;
+  openModal(app);
+}
+async function deleteApplication(id: string) {
+  activeMenuId.value = null;
+  await confirmDelete(id);
 }
 
 // Lifecycle
@@ -891,7 +927,48 @@ watch(modalOpen,(isOpen)=>{
   align-items: center;
   gap: 12px;
 }
+.app-card-actions {
+  position: relative;
+}
 
+.app-card-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 150px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 12%);
+}
+
+.app-card-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-card-dropdown button:hover {
+  background: var(--bg-secondary);
+}
+
+.app-card-dropdown .delete-action {
+  color: #dc5252;
+}
+
+.app-card-dropdown .material-symbols-outlined {
+  font-size: 18px;
+}
 .title {
   font-size: 28px;
   font-weight: 700;
