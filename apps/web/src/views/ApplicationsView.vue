@@ -648,13 +648,23 @@ function getFooterStatusClass(app: Application) {
   return '';
 }
 async function confirmDelete(id: string) {
-  if (confirm('Delete this application?')) {
+  if (!confirm('Delete this application?')) return;
+
+  try {
     await store.remove(id);
+
     toast.showToast({
       type: 'success',
-      title: 'Postulación Eliminada con Exito.',
-      message:
-        'La postulación se elimino con exito.',
+      title: 'Postulación eliminada',
+      message: 'La postulación se eliminó correctamente.',
+    });
+  } catch (error) {
+    console.error('Error deleting application:', error);
+
+    toast.showToast({
+      type: 'error',
+      title: 'Error al eliminar',
+      message: 'No se pudo eliminar la postulación. Intentá nuevamente.',
     });
   }
 }
